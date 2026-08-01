@@ -32,7 +32,9 @@
                     @endphp
                     <div wire:key="p-{{ $p->id }}" class="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3">
                         <div class="flex items-start justify-between">
-                            <span class="grid h-12 w-12 place-items-center rounded-xl bg-slate-100 text-2xl">{{ $p->emoji ?? '📦' }}</span>
+                            <span class="grid h-12 w-12 place-items-center overflow-hidden rounded-xl bg-slate-100 text-2xl">
+                                @if ($p->image_path)<img src="{{ asset('storage/' . $p->image_path) }}" class="h-full w-full object-cover">@else{{ $p->emoji ?? '📦' }}@endif
+                            </span>
                             <span class="rounded-full px-2 py-0.5 text-[10px] font-bold {{ $out ? 'bg-red-100 text-red-700' : ($stock <= 5 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700') }}">
                                 {{ $out ? 'Habis' : ($stock <= 5 ? 'Sisa '.$stock : 'Stok '.$stock) }}
                             </span>

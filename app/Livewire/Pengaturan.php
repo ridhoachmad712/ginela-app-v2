@@ -5,11 +5,18 @@ namespace App\Livewire;
 use App\Models\StoreSetting;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 #[Layout('layouts.pos')]
 class Pengaturan extends Component
 {
+    use WithFileUploads;
+
     public bool $isAdmin = false;
+
+    public $logo = null;
+
+    public ?string $existingLogo = null;
 
     public string $name = '';
 
@@ -37,6 +44,7 @@ class Pengaturan extends Component
         $this->taxPct = (string) round($s->tax_rate * 100);
         $this->discPct = (string) round($s->member_discount_rate * 100);
         $this->pointPer1000 = (string) round($s->point_per_rupiah * 1000);
+        $this->existingLogo = $s->logo_path;
     }
 
     public function save(): void
@@ -65,14 +73,23 @@ class Pengaturan extends Component
             return;
         }
 
-        StoreSetting::current()->update([
+        if ($this->logo) {
+            $this->validate(['logo' => 'image|max:1024']);
+        }
+        $data = [
             'name' => trim($this->name),
             'address' => trim($this->address),
             'phone' => trim($this->phone),
             'tax_rate' => (float) $this->taxPct / 100,
             'member_discount_rate' => (float) $this->discPct / 100,
             'point_per_rupiah' => (float) $this->pointPer1000 / 1000,
-        ]);
+        ];
+        if ($this->logo) {
+            $data['logo_path'] = $this->logo->store('logo', 'public');
+            $this->existingLogo = $data['logo_path'];
+            $this->logo = null;
+        }
+        StoreSetting::current()->update($data);
 
         $this->saved = true;
     }

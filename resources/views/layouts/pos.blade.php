@@ -26,12 +26,15 @@
         ['url' => '/pengaturan', 'label' => 'Atur', 'icon' => 'M12 9a3 3 0 100 6 3 3 0 000-6z'],
     ];
     $path = request()->path();
+    $store = \App\Models\StoreSetting::current();
 @endphp
 
 <div class="flex h-[100dvh] overflow-hidden">
     {{-- Rail — tablet & desktop --}}
     <nav class="hidden w-[84px] flex-none flex-col items-center gap-1 border-r border-slate-200 bg-white py-4 md:flex">
-        <div class="mb-3 grid h-11 w-11 place-items-center rounded-2xl bg-blue-600 text-lg font-extrabold text-white">G</div>
+        <div class="mb-3 grid h-11 w-11 place-items-center overflow-hidden rounded-2xl bg-blue-600 text-lg font-extrabold text-white">
+            @if ($store->logo_path)<img src="{{ asset('storage/' . $store->logo_path) }}" class="h-full w-full bg-white object-contain">@else G @endif
+        </div>
         @foreach ($nav as $n)
             @php $active = str_starts_with('/'.$path, $n['url']) || ($n['url']==='/kasir' && $path==='/'); @endphp
             <a href="{{ $n['url'] }}"

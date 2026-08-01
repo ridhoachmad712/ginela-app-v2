@@ -60,7 +60,9 @@
                         <tr wire:key="row-{{ $p->id }}" class="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
-                                    <span class="grid h-9 w-9 flex-none place-items-center rounded-lg bg-slate-100 text-lg">{{ $p->emoji ?? '📦' }}</span>
+                                    <span class="grid h-9 w-9 flex-none place-items-center overflow-hidden rounded-lg bg-slate-100 text-lg">
+                                        @if ($p->image_path)<img src="{{ asset('storage/' . $p->image_path) }}" class="h-full w-full object-cover">@else{{ $p->emoji ?? '📦' }}@endif
+                                    </span>
                                     <div><div class="font-semibold">{{ $p->name }}</div><div class="text-xs text-slate-400">{{ $p->category->name ?? '—' }} · per {{ $p->unit }}</div></div>
                                 </div>
                             </td>
@@ -108,8 +110,27 @@
                             </select></label>
                         <label class="flex flex-col gap-1.5"><span class="text-xs font-semibold text-slate-500">Satuan</span>
                             <input wire:model="fUnit" class="h-11 rounded-xl border border-slate-200 px-3 text-sm" placeholder="pcs"></label>
-                        <label class="flex flex-col gap-1.5"><span class="text-xs font-semibold text-slate-500">Emoji</span>
+                        <label class="flex flex-col gap-1.5"><span class="text-xs font-semibold text-slate-500">Emoji (cadangan bila tanpa foto)</span>
                             <input wire:model="fEmoji" class="h-11 rounded-xl border border-slate-200 px-3 text-sm" placeholder="👕"></label>
+                    </div>
+
+                    {{-- Foto produk --}}
+                    <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <div class="grid h-16 w-16 flex-none place-items-center overflow-hidden rounded-xl bg-white">
+                            @if ($photo)
+                                <img src="{{ $photo->temporaryUrl() }}" class="h-full w-full object-cover">
+                            @elseif ($existingImage)
+                                <img src="{{ asset('storage/' . $existingImage) }}" class="h-full w-full object-cover">
+                            @else
+                                <span class="text-2xl">{{ $fEmoji ?: '📦' }}</span>
+                            @endif
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs font-semibold text-slate-500">Foto produk (opsional, maks 2MB)</div>
+                            <input type="file" wire:model="photo" accept="image/*" class="mt-1 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white">
+                            <div wire:loading wire:target="photo" class="mt-1 text-xs text-blue-600">Mengunggah…</div>
+                            @error('photo')<div class="mt-1 text-xs text-red-600">{{ $message }}</div>@enderror
+                        </div>
                     </div>
 
                     @if ($mode === 'new')

@@ -17,6 +17,27 @@
         {{-- Identitas --}}
         <section class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5">
             <h2 class="text-sm font-bold">Identitas Toko</h2>
+            {{-- Logo --}}
+            <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div class="grid h-16 w-16 flex-none place-items-center overflow-hidden rounded-xl bg-white">
+                    @if ($logo)
+                        <img src="{{ $logo->temporaryUrl() }}" class="h-full w-full object-contain">
+                    @elseif ($existingLogo)
+                        <img src="{{ asset('storage/' . $existingLogo) }}" class="h-full w-full object-contain">
+                    @else
+                        <span class="text-2xl font-extrabold text-blue-600">G</span>
+                    @endif
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="text-xs font-semibold text-slate-500">Logo toko (opsional, maks 1MB)</div>
+                    @if ($isAdmin)
+                        <input type="file" wire:model="logo" accept="image/*" class="mt-1 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white">
+                        <div wire:loading wire:target="logo" class="mt-1 text-xs text-blue-600">Mengunggah…</div>
+                        @error('logo')<div class="mt-1 text-xs text-red-600">{{ $message }}</div>@enderror
+                    @endif
+                    <p class="mt-1 text-xs text-slate-400">Muncul di struk &amp; halaman login.</p>
+                </div>
+            </div>
             <label class="flex flex-col gap-1.5"><span class="text-xs font-semibold text-slate-500">Nama toko</span>
                 <input wire:model="name" @disabled(!$isAdmin) class="h-11 rounded-xl border border-slate-200 px-3 text-sm disabled:opacity-60"></label>
             <label class="flex flex-col gap-1.5"><span class="text-xs font-semibold text-slate-500">Alamat</span>

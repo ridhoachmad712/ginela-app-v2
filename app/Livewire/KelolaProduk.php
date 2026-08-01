@@ -9,11 +9,18 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 #[Layout('layouts.pos')]
 class KelolaProduk extends Component
 {
+    use WithFileUploads;
+
     public string $q = '';
+
+    public $photo = null;
+
+    public ?string $existingImage = null;
 
     public ?string $selCat = null; // null = tampilkan grid kategori; id | 'all' | 'none'
 
@@ -121,7 +128,7 @@ class KelolaProduk extends Component
         if (! $this->guardAdmin()) {
             return;
         }
-        $this->reset(['fName', 'fCategory', 'fUnit', 'fEmoji', 'attrs', 'rows', 'editId', 'error']);
+        $this->reset(['fName', 'fCategory', 'fUnit', 'fEmoji', 'attrs', 'rows', 'editId', 'error', 'photo', 'existingImage']);
         $this->fUnit = 'pcs';
         $this->rows = [$this->emptyRow([])];
         $this->mode = 'new';
@@ -197,13 +204,18 @@ class KelolaProduk extends Component
             }
         }
         $pa = $this->parsedAttrs();
+        if ($this->photo) {
+            $this->validate(['photo' => 'image|max:2048']);
+        }
+        $imagePath = $this->photo ? $this->photo->store('products', 'public') : null;
 
-        DB::transaction(function () use ($pa) {
+        DB::transaction(function () use ($pa, $imagePath) {
             $product = Product::create([
                 'name' => trim($this->fName),
                 'category_id' => $this->fCategory ? (int) $this->fCategory : null,
                 'unit' => trim($this->fUnit) ?: 'pcs',
                 'emoji' => trim($this->fEmoji) ?: null,
+                'image_path' => $imagePath,
             ]);
             $optId = [];
             foreach ($pa as $ai => $a) {
@@ -249,6 +261,8 @@ class KelolaProduk extends Component
         $this->fCategory = (string) ($p->category_id ?? '');
         $this->fUnit = $p->unit;
         $this->fEmoji = $p->emoji ?? '';
+        $this->existingImage = $p->image_path;
+        $this->photo = null;
         $this->editRows = $p->variants->map(fn ($v) => [
             'id' => $v->id, 'label' => $v->label,
             'offline' => (string) $v->offline_price, 'online' => (string) $v->online_price,
@@ -270,13 +284,22 @@ class KelolaProduk extends Component
 
             return;
         }
-        DB::transaction(function () {
-            Product::where('id', $this->editId)->update([
+        if ($this->photo) {
+            $this->validate(['photo' => 'image|max:2048']);
+        }
+        $newImage = $this->photo ? $this->photo->store('products', 'public') : null;
+
+        DB::transaction(function () use ($newImage) {
+            $data = [
                 'name' => trim($this->fName),
                 'category_id' => $this->fCategory ? (int) $this->fCategory : null,
                 'unit' => trim($this->fUnit) ?: 'pcs',
                 'emoji' => trim($this->fEmoji) ?: null,
-            ]);
+            ];
+            if ($newImage) {
+                $data['image_path'] = $newImage;
+            }
+            Product::where('id', $this->editId)->update($data);
             foreach ($this->editRows as $r) {
                 \App\Models\ProductVariant::where('id', $r['id'])->update([
                     'offline_price' => (int) $r['offline'], 'online_price' => (int) $r['online'],

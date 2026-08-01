@@ -6,6 +6,9 @@
 @endphp
 <div class="receipt-print mx-auto w-[280px] rounded-2xl border border-slate-200 bg-white p-4 text-left font-mono text-[12px] leading-tight text-black">
     <div class="text-center">
+        @if ($st->logo_path)
+            <img src="{{ asset('storage/' . $st->logo_path) }}" class="mx-auto mb-1 h-12 object-contain">
+        @endif
         <div class="text-sm font-bold">{{ $st->name }}</div>
         @if ($st->address)<div>{{ $st->address }}</div>@endif
         @if ($st->phone)<div>{{ $st->phone }}</div>@endif
