@@ -5,7 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? 'Ginela POS' }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <style>[x-cloak]{display:none!important}</style>
+    <style>
+        [x-cloak]{display:none!important}
+        @media print {
+            body * { visibility: hidden !important; }
+            .receipt-print, .receipt-print * { visibility: visible !important; }
+            .receipt-print { position: absolute; left: 0; top: 0; border: 0 !important; }
+        }
+    </style>
 </head>
 <body class="h-full bg-slate-100 text-slate-800 antialiased">
 @php

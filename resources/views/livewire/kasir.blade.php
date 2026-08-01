@@ -95,4 +95,7 @@
             </div>
         </div>
     @endif
+
+    {{-- ================= Pembayaran / Sukses ================= --}}
+    @include('livewire.partials.payment')
 </div>
