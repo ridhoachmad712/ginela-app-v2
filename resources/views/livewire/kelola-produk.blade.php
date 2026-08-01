@@ -1,19 +1,42 @@
 <div class="flex min-h-0 flex-1 flex-col">
     <div class="flex flex-col gap-3 border-b border-slate-200 bg-white px-5 pb-3 pt-5">
         <div class="flex items-center gap-3">
-            <h1 class="text-lg font-bold tracking-tight">Kelola Produk</h1>
-            <span class="text-sm text-slate-400">{{ $this->products->count() }} produk</span>
+            @if ($selCat !== null)
+                <button wire:click="backCats" class="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100" aria-label="Kembali">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <h1 class="text-lg font-bold tracking-tight">{{ $selCatName }}</h1>
+                <span class="text-sm text-slate-400">{{ $this->products->count() }} produk</span>
+            @else
+                <h1 class="text-lg font-bold tracking-tight">Kelola Produk</h1>
+                <span class="text-sm text-slate-400">Pilih kategori</span>
+            @endif
             @if ($isAdmin)
                 <button wire:click="openNew" class="ml-auto rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">+ Tambah Produk</button>
             @endif
         </div>
-        <div class="flex max-w-md items-center gap-2 rounded-xl border border-slate-200 bg-white px-3">
-            <svg class="h-4 w-4 flex-none text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-            <input wire:model.live.debounce.300ms="q" placeholder="Cari produk…" class="h-11 flex-1 border-0 bg-transparent p-0 text-sm focus:ring-0">
-        </div>
+        @if ($selCat !== null)
+            <div class="flex max-w-md items-center gap-2 rounded-xl border border-slate-200 bg-white px-3">
+                <svg class="h-4 w-4 flex-none text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+                <input wire:model.live.debounce.300ms="q" placeholder="Cari produk…" class="h-11 flex-1 border-0 bg-transparent p-0 text-sm focus:ring-0">
+            </div>
+        @endif
     </div>
 
     <div class="min-h-0 flex-1 overflow-auto px-5 py-4 pb-24 md:pb-4">
+        @if ($selCat === null)
+            {{-- Grid kategori --}}
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                @foreach ($this->catCards as $c)
+                    <button wire:key="cat-{{ $c['id'] }}" wire:click="openCat('{{ $c['id'] }}', @js($c['name']))"
+                            class="flex flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-600 hover:shadow-sm">
+                        <span class="grid h-12 w-12 place-items-center rounded-xl bg-slate-100 text-2xl">{{ $c['emoji'] }}</span>
+                        <span class="font-semibold">{{ $c['name'] }}</span>
+                        <span class="text-xs text-slate-400">{{ $c['count'] }} produk</span>
+                    </button>
+                @endforeach
+            </div>
+        @else
         <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
             <table class="w-full min-w-[720px] border-collapse text-sm">
                 <thead>
@@ -61,6 +84,7 @@
                 </tbody>
             </table>
         </div>
+        @endif
     </div>
 
     {{-- ============ Modal Create / Edit ============ --}}

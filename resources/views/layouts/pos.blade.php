@@ -17,6 +17,7 @@
 <body class="h-full bg-slate-100 text-slate-800 antialiased">
 @php
     $nav = [
+        ['url' => '/dashboard', 'label' => 'Beranda', 'icon' => 'M3 12l9-9 9 9M5 10v10h14V10'],
         ['url' => '/kasir', 'label' => 'Kasir', 'icon' => 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z'],
         ['url' => '/produk', 'label' => 'Produk', 'icon' => 'M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7'],
         ['url' => '/stok', 'label' => 'Stok', 'icon' => 'M4 7h16M4 12h16M4 17h16'],

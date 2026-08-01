@@ -77,6 +77,13 @@
             {{-- Recap --}}
             <aside class="flex flex-col border-b border-slate-200 bg-white md:w-[340px] md:flex-none md:border-b-0 md:border-r">
                 <div class="border-b border-slate-200 px-5 py-3">
+                    <div class="mb-2 text-xs font-semibold text-slate-500">Jenis Harga</div>
+                    <div class="grid grid-cols-2 gap-2 text-sm font-semibold">
+                        <button wire:click="$set('channel','OFFLINE')" class="rounded-xl border py-2.5 transition {{ $channel === 'OFFLINE' ? 'border-blue-600 bg-blue-50 text-blue-600' : 'border-slate-200 text-slate-500' }}">Offline (toko)</button>
+                        <button wire:click="$set('channel','ONLINE')" class="rounded-xl border py-2.5 transition {{ $channel === 'ONLINE' ? 'border-blue-600 bg-blue-50 text-blue-600' : 'border-slate-200 text-slate-500' }}">Online</button>
+                    </div>
+                </div>
+                <div class="border-b border-slate-200 px-5 py-3">
                     @if ($this->member)
                         <div class="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2.5 text-sm">
                             <span class="min-w-0 flex-1"><span class="block truncate font-semibold text-blue-700">{{ $this->member->name }}</span><span class="text-xs text-slate-400">{{ $this->member->points }} poin</span></span>

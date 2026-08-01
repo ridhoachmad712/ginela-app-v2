@@ -4,15 +4,7 @@
         <div class="flex flex-col gap-3 border-b border-slate-200 bg-white px-5 pb-3 pt-5">
             <div class="flex items-center gap-3">
                 <h1 class="text-lg font-bold tracking-tight">Katalog Produk</h1>
-                {{-- Toggle channel --}}
-                <div class="ml-auto flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs font-semibold">
-                    @foreach (['OFFLINE' => 'Offline', 'ONLINE' => 'Online'] as $val => $lab)
-                        <button wire:click="$set('channel','{{ $val }}')"
-                                class="rounded-md px-3 py-1.5 transition {{ $channel === $val ? 'bg-blue-600 text-white' : 'text-slate-500' }}">
-                            {{ $lab }}
-                        </button>
-                    @endforeach
-                </div>
+                <span class="ml-auto rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">Harga: {{ $channel === 'ONLINE' ? 'Online' : 'Offline' }}</span>
             </div>
             <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3">
                 <svg class="h-4 w-4 flex-none text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>

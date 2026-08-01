@@ -15,6 +15,10 @@ class KelolaProduk extends Component
 {
     public string $q = '';
 
+    public ?string $selCat = null; // null = tampilkan grid kategori; id | 'all' | 'none'
+
+    public string $selCatName = '';
+
     public ?string $mode = null; // 'new' | 'edit'
 
     public ?int $editId = null;
@@ -55,6 +59,9 @@ class KelolaProduk extends Component
 
         return Product::with(['category', 'attributes.options', 'variants'])
             ->where('is_active', true)
+            ->when($this->selCat === 'none', fn ($qq) => $qq->whereNull('category_id'))
+            ->when($this->selCat !== null && ! in_array($this->selCat, ['all', 'none'], true),
+                fn ($qq) => $qq->where('category_id', (int) $this->selCat))
             ->when($s !== '', fn ($qq) => $qq->whereRaw('LOWER(name) like ?', ["%{$s}%"]))
             ->orderBy('name')->get();
     }
@@ -63,6 +70,38 @@ class KelolaProduk extends Component
     public function categories()
     {
         return Category::orderBy('sort_order')->get();
+    }
+
+    #[Computed]
+    public function catCards(): array
+    {
+        $counts = Product::where('is_active', true)
+            ->selectRaw('category_id, count(*) as c')->groupBy('category_id')->pluck('c', 'category_id');
+        $total = (int) $counts->sum();
+        $cards = [['id' => 'all', 'name' => 'Semua Produk', 'count' => $total, 'emoji' => '📦']];
+        foreach ($this->categories as $c) {
+            $cards[] = ['id' => (string) $c->id, 'name' => $c->name, 'count' => (int) ($counts[$c->id] ?? 0), 'emoji' => '🏷️'];
+        }
+        $none = (int) ($counts[null] ?? $counts[''] ?? 0);
+        if ($none > 0) {
+            $cards[] = ['id' => 'none', 'name' => 'Tanpa Kategori', 'count' => $none, 'emoji' => '❔'];
+        }
+
+        return $cards;
+    }
+
+    public function openCat(string $val, string $name): void
+    {
+        $this->selCat = $val;
+        $this->selCatName = $name;
+        $this->q = '';
+        unset($this->products);
+    }
+
+    public function backCats(): void
+    {
+        $this->selCat = null;
+        $this->q = '';
     }
 
     private function guardAdmin(): bool
