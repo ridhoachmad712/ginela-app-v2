@@ -2,6 +2,8 @@
 
 use App\Livewire\Kasir;
 use App\Livewire\KelolaProduk;
+use App\Livewire\Laporan;
+use App\Livewire\Riwayat;
 use App\Livewire\Stok;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -12,6 +14,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/kasir', Kasir::class)->name('kasir');
     Route::get('/produk', KelolaProduk::class)->name('produk');
     Route::get('/stok', Stok::class)->name('stok');
+    Route::get('/transaksi', Riwayat::class)->name('transaksi');
+    Route::get('/laporan', Laporan::class)->name('laporan');
 });
 
 // Pasca-login Breeze mengarah ke 'dashboard' — alihkan ke kasir.
