@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Kasir;
+use App\Livewire\KelolaProduk;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -8,6 +9,7 @@ Route::redirect('/', '/kasir');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/kasir', Kasir::class)->name('kasir');
+    Route::get('/produk', KelolaProduk::class)->name('produk');
 });
 
 // Pasca-login Breeze mengarah ke 'dashboard' — alihkan ke kasir.
