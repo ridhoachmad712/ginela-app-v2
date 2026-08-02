@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class StoreSetting extends Model
 {
     protected $fillable = [
-        'name', 'address', 'phone', 'logo_path', 'tax_rate', 'member_discount_rate', 'point_per_rupiah',
+        'name', 'address', 'phone', 'logo_path', 'theme_color', 'tax_rate', 'member_discount_rate', 'point_per_rupiah',
     ];
 
     protected $casts = [

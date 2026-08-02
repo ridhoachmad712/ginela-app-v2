@@ -1,16 +1,26 @@
 @php $store = \App\Models\StoreSetting::current(); @endphp
 <!DOCTYPE html>
-<html lang="id" class="h-full">
+<html lang="id" class="h-full" data-accent="{{ $store->theme_color ?? 'blue' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Masuk · {{ $store->name }}</title>
+    <script>
+        (function () {
+            try {
+                var d = localStorage.getItem('ginela-dark');
+                if (d === '1' || (d === null && window.matchMedia('(prefers-color-scheme:dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                }
+            } catch (e) {}
+        })();
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="h-full bg-slate-50 text-slate-800 antialiased">
+<body class="h-full bg-base text-ink antialiased">
 <div class="flex min-h-[100dvh] flex-col md:flex-row">
     {{-- Panel brand --}}
-    <div class="relative flex flex-col justify-center gap-8 overflow-hidden bg-gradient-to-br from-blue-600 to-sky-500 p-8 text-white md:w-1/2 md:p-12">
+    <div class="relative flex flex-col justify-center gap-8 overflow-hidden bg-gradient-to-br from-accent-600 to-sky-500 p-8 text-white md:w-1/2 md:p-12">
         <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10"></div>
         <div class="pointer-events-none absolute -bottom-20 -left-10 h-72 w-72 rounded-full bg-white/10"></div>
         <div class="relative flex items-center gap-3">

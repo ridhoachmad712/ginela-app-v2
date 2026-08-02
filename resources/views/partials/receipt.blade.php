@@ -4,7 +4,7 @@
     $after = $trx->subtotal - $trx->discount;
     $pointsEarned = $trx->member_id ? (int) floor($after * $st->point_per_rupiah) : 0;
 @endphp
-<div class="receipt-print mx-auto w-[280px] rounded-2xl border border-slate-200 bg-white p-4 text-left font-mono text-[12px] leading-tight text-black">
+<div class="receipt-print mx-auto w-[280px] rounded-2xl border border-slate-200 bg-white p-4 text-left font-mono text-[12px] leading-tight text-black shadow-sm">
     <div class="text-center">
         @if ($st->logo_path)
             <img src="{{ asset('storage/' . $st->logo_path) }}" class="mx-auto mb-1 h-12 object-contain">

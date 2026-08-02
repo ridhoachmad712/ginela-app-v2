@@ -128,8 +128,10 @@ class Stok extends Component
             });
         }
 
+        $wasAdd = $this->modalMode === 'add';
         $this->close();
         unset($this->variants, $this->lowStock, $this->movements);
+        $this->dispatch('toast', message: $wasAdd ? 'Stok ditambahkan' : 'Stok disesuaikan', type: 'success');
     }
 
     public function render()

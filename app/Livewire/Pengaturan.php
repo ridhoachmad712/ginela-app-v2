@@ -30,6 +30,10 @@ class Pengaturan extends Component
 
     public string $pointPer1000 = '';
 
+    public string $themeColor = 'blue';
+
+    public const THEMES = ['blue', 'green', 'violet', 'rose', 'orange', 'teal'];
+
     public ?string $error = null;
 
     public bool $saved = false;
@@ -45,6 +49,7 @@ class Pengaturan extends Component
         $this->discPct = (string) round($s->member_discount_rate * 100);
         $this->pointPer1000 = (string) round($s->point_per_rupiah * 1000);
         $this->existingLogo = $s->logo_path;
+        $this->themeColor = in_array($s->theme_color, self::THEMES, true) ? $s->theme_color : 'blue';
     }
 
     public function save(): void
@@ -83,6 +88,7 @@ class Pengaturan extends Component
             'tax_rate' => (float) $this->taxPct / 100,
             'member_discount_rate' => (float) $this->discPct / 100,
             'point_per_rupiah' => (float) $this->pointPer1000 / 1000,
+            'theme_color' => in_array($this->themeColor, self::THEMES, true) ? $this->themeColor : 'blue',
         ];
         if ($this->logo) {
             $data['logo_path'] = $this->logo->store('logo', 'public');
@@ -92,6 +98,7 @@ class Pengaturan extends Component
         StoreSetting::current()->update($data);
 
         $this->saved = true;
+        $this->dispatch('toast', message: 'Pengaturan tersimpan', type: 'success');
     }
 
     public function render()

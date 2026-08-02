@@ -1,3 +1,101 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================================
+   Design tokens — surface / ink / line + accent
+   Light = :root, Dark = .dark, Accent hue = [data-accent]
+   Values are space-separated RGB for Tailwind <alpha-value>.
+   ============================================================ */
+@layer base {
+    :root {
+        color-scheme: light;
+
+        --c-base: 241 245 249;      /* slate-100 : page */
+        --c-surface: 255 255 255;   /* white     : card */
+        --c-surface-2: 248 250 252; /* slate-50  : subtle panel */
+        --c-surface-3: 241 245 249; /* slate-100 : chip / hover */
+        --c-ink: 30 41 59;          /* slate-800 : text */
+        --c-ink-soft: 100 116 139;  /* slate-500 : muted */
+        --c-ink-faint: 148 163 184; /* slate-400 : faint */
+        --c-line: 226 232 240;      /* slate-200 : border */
+        --c-line-soft: 241 245 249; /* slate-100 : soft border */
+
+        /* accent default = blue */
+        --c-accent-50: 239 246 255;
+        --c-accent-100: 219 234 254;
+        --c-accent-300: 147 197 253;
+        --c-accent-500: 59 130 246;
+        --c-accent-600: 37 99 235;
+        --c-accent-700: 29 78 216;
+    }
+
+    .dark {
+        color-scheme: dark;
+
+        --c-base: 2 6 23;           /* slate-950 */
+        --c-surface: 15 23 42;      /* slate-900 */
+        --c-surface-2: 30 41 59;    /* slate-800 */
+        --c-surface-3: 30 41 59;    /* slate-800 */
+        --c-ink: 226 232 240;       /* slate-200 */
+        --c-ink-soft: 148 163 184;  /* slate-400 */
+        --c-ink-faint: 100 116 139; /* slate-500 */
+        --c-line: 51 65 85;         /* slate-700 */
+        --c-line-soft: 30 41 59;    /* slate-800 */
+    }
+
+    /* Accent palettes (hue only) */
+    [data-accent="green"] {
+        --c-accent-50: 236 253 245; --c-accent-100: 209 250 229; --c-accent-300: 110 231 183;
+        --c-accent-500: 16 185 129; --c-accent-600: 5 150 105;   --c-accent-700: 4 120 87;
+    }
+    [data-accent="violet"] {
+        --c-accent-50: 245 243 255; --c-accent-100: 237 233 254; --c-accent-300: 196 181 253;
+        --c-accent-500: 139 92 246; --c-accent-600: 124 58 237;  --c-accent-700: 109 40 217;
+    }
+    [data-accent="rose"] {
+        --c-accent-50: 255 241 242; --c-accent-100: 255 228 230; --c-accent-300: 253 164 175;
+        --c-accent-500: 244 63 94;  --c-accent-600: 225 29 72;   --c-accent-700: 190 18 60;
+    }
+    [data-accent="orange"] {
+        --c-accent-50: 255 247 237; --c-accent-100: 255 237 213; --c-accent-300: 253 186 116;
+        --c-accent-500: 249 115 22; --c-accent-600: 234 88 12;   --c-accent-700: 194 65 12;
+    }
+    [data-accent="teal"] {
+        --c-accent-50: 240 253 250; --c-accent-100: 204 251 241; --c-accent-300: 94 234 212;
+        --c-accent-500: 20 184 166; --c-accent-600: 13 148 136;  --c-accent-700: 15 118 110;
+    }
+
+    body {
+        @apply bg-base text-ink;
+    }
+}
+
+/* ============================================================
+   Component helpers
+   ============================================================ */
+@layer components {
+    /* Soft accent chip / active pill — readable in both modes */
+    .chip-accent { @apply bg-accent-50 text-accent-700; }
+    .dark .chip-accent { background: rgb(var(--c-accent-500) / 0.16); color: rgb(var(--c-accent-300)); }
+
+    /* Skeleton shimmer block */
+    .skeleton {
+        @apply relative overflow-hidden rounded-lg bg-surface-3;
+    }
+    .skeleton::after {
+        content: '';
+        @apply absolute inset-0;
+        transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent);
+        animation: shimmer 1.4s infinite;
+    }
+    .dark .skeleton::after {
+        background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+    }
+}
+
+/* Respect reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}

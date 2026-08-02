@@ -244,6 +244,7 @@ class KelolaProduk extends Component
         });
 
         $this->close();
+        $this->dispatch('toast', message: 'Produk ditambahkan', type: 'success');
     }
 
     // ---------- Edit ----------
@@ -309,6 +310,7 @@ class KelolaProduk extends Component
             }
         });
         $this->close();
+        $this->dispatch('toast', message: 'Perubahan produk tersimpan', type: 'success');
     }
 
     public function deleteProduct(): void
@@ -319,6 +321,7 @@ class KelolaProduk extends Component
         Product::where('id', $this->deletingId)->update(['is_active' => false]);
         $this->deletingId = null;
         unset($this->products);
+        $this->dispatch('toast', message: 'Produk dinonaktifkan', type: 'info');
     }
 
     public function close(): void
