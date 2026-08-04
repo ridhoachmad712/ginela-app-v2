@@ -31,7 +31,7 @@
                 <p class="text-sm font-medium">Belum ada transaksi pada periode ini.<br>Transaksi dari kasir akan muncul di sini.</p>
             </div>
         @else
-            <div class="overflow-x-auto rounded-2xl border border-line bg-surface">
+            <div class="overflow-x-auto card">
                 <table class="w-full min-w-[680px] border-collapse text-sm">
                     <thead><tr class="border-b border-line bg-surface-2 text-left text-xs uppercase tracking-wide text-ink-soft">
                         <th class="px-4 py-3 font-semibold">Kode</th><th class="px-4 py-3 font-semibold">Waktu</th><th class="px-4 py-3 font-semibold">Metode</th><th class="px-4 py-3 font-semibold">Member</th><th class="px-4 py-3 text-right font-semibold">Item</th><th class="px-4 py-3 text-right font-semibold">Total</th><th class="px-4 py-3 text-right font-semibold">Aksi</th>

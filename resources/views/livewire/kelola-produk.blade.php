@@ -29,7 +29,7 @@
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 @foreach ($this->catCards as $c)
                     <button wire:key="cat-{{ $c['id'] }}" wire:click="openCat('{{ $c['id'] }}', @js($c['name']))"
-                            class="flex flex-col items-start gap-2 rounded-2xl border border-line bg-surface p-4 text-left transition hover:border-accent-600 hover:shadow-sm">
+                            class="flex flex-col items-start gap-2 card p-4 text-left transition hover:border-accent-600 hover:shadow-sm">
                         <span class="grid h-12 w-12 place-items-center rounded-xl bg-surface-3 text-2xl">{{ $c['emoji'] }}</span>
                         <span class="font-semibold">{{ $c['name'] }}</span>
                         <span class="text-xs text-ink-faint">{{ $c['count'] }} produk</span>
@@ -37,7 +37,7 @@
                 @endforeach
             </div>
         @else
-        <div class="overflow-x-auto rounded-2xl border border-line bg-surface">
+        <div class="overflow-x-auto card">
             <table class="w-full min-w-[720px] border-collapse text-sm">
                 <thead>
                     <tr class="border-b border-line bg-surface-2 text-left text-xs uppercase tracking-wide text-ink-soft">

@@ -41,7 +41,7 @@
                     <input wire:model.live.debounce.300ms="q" placeholder="Cari produk / varian…" class="h-10 flex-1 border-0 bg-transparent p-0 text-sm focus:ring-0">
                 </div>
             </div>
-            <div class="overflow-x-auto rounded-2xl border border-line bg-surface">
+            <div class="overflow-x-auto card">
                 <table class="w-full min-w-[560px] border-collapse text-sm">
                     <thead><tr class="border-b border-line bg-surface-2 text-left text-xs uppercase tracking-wide text-ink-soft">
                         <th class="px-4 py-3 font-semibold">Produk / Varian</th><th class="px-4 py-3 text-right font-semibold">Stok</th><th class="px-4 py-3 text-right font-semibold">Min</th><th class="px-4 py-3 text-right font-semibold">Aksi</th>
@@ -66,7 +66,7 @@
         {{-- Riwayat pergerakan --}}
         <section class="flex flex-col gap-3">
             <h2 class="text-sm font-bold">Riwayat Pergerakan Stok</h2>
-            <div class="overflow-x-auto rounded-2xl border border-line bg-surface">
+            <div class="overflow-x-auto card">
                 <table class="w-full min-w-[640px] border-collapse text-sm">
                     <thead><tr class="border-b border-line bg-surface-2 text-left text-xs uppercase tracking-wide text-ink-soft">
                         <th class="px-4 py-3 font-semibold">Waktu</th><th class="px-4 py-3 font-semibold">Produk / Varian</th><th class="px-4 py-3 font-semibold">Tipe</th><th class="px-4 py-3 text-right font-semibold">Perubahan</th><th class="px-4 py-3 text-right font-semibold">Stok</th><th class="px-4 py-3 font-semibold">Ket.</th>

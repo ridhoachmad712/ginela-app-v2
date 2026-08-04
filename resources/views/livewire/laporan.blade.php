@@ -24,7 +24,7 @@
         {{-- Kartu statistik --}}
         <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
             @foreach ([['Penjualan', rp($s['penjualan']), 'bg-accent-50 text-accent-600'], ['Laba kotor', rp($s['laba']), 'bg-green-50 text-green-600'], ['Transaksi', number_format($s['jml']), 'bg-surface-3 text-ink-soft'], ['Item terjual', number_format($s['item']), 'bg-surface-3 text-ink-soft']] as [$lab, $val, $cls])
-                <div class="rounded-2xl border border-line bg-surface p-4">
+                <div class="card p-4">
                     <div class="mb-2 inline-grid h-8 w-8 place-items-center rounded-lg {{ $cls }} text-xs font-bold">Rp</div>
                     <div class="text-xs font-medium text-ink-soft">{{ $lab }}</div>
                     <div class="mt-0.5 text-xl font-extrabold tracking-tight tabular-nums">{{ $val }}</div>
@@ -33,7 +33,7 @@
         </div>
 
         {{-- Tren harian --}}
-        <section class="rounded-2xl border border-line bg-surface p-5">
+        <section class="card p-5">
             <h2 class="mb-4 text-sm font-bold">Tren Penjualan Harian</h2>
             @if ($s['penjualan'] === 0)
                 <p class="py-8 text-center text-sm text-ink-faint">Belum ada penjualan pada periode ini.</p>
@@ -52,7 +52,7 @@
         </section>
 
         {{-- Produk terlaris --}}
-        <section class="rounded-2xl border border-line bg-surface p-5">
+        <section class="card p-5">
             <h2 class="mb-4 text-sm font-bold">Produk Terlaris</h2>
             @if ($top->isEmpty())
                 <p class="py-8 text-center text-sm text-ink-faint">Belum ada data.</p>

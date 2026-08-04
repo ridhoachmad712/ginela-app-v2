@@ -15,7 +15,7 @@
         @endunless
 
         {{-- Identitas --}}
-        <section class="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5">
+        <section class="flex flex-col gap-4 card p-5">
             <h2 class="text-sm font-bold">Identitas Toko</h2>
             {{-- Logo --}}
             <div class="flex items-center gap-4 rounded-xl border border-line bg-surface-2 p-3">
@@ -48,7 +48,7 @@
         </section>
 
         {{-- Tarif --}}
-        <section class="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5">
+        <section class="flex flex-col gap-4 card p-5">
             <h2 class="text-sm font-bold">Tarif Transaksi</h2>
             <div class="grid grid-cols-2 gap-4">
                 <label class="flex flex-col gap-1.5"><span class="text-xs font-semibold text-ink-soft">Pajak / PPN (%)</span>
@@ -63,7 +63,7 @@
 
         {{-- Tampilan --}}
         @php $swatches = ['blue'=>'#2563eb','green'=>'#059669','violet'=>'#7c3aed','rose'=>'#e11d48','orange'=>'#ea580c','teal'=>'#0d9488']; @endphp
-        <section class="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5"
+        <section class="flex flex-col gap-4 card p-5"
                  x-data="{ c: @entangle('themeColor'), dark: document.documentElement.classList.contains('dark') }">
             <h2 class="text-sm font-bold">Tampilan</h2>
 

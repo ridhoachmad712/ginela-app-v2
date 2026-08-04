@@ -75,6 +75,12 @@
    Component helpers
    ============================================================ */
 @layer components {
+    /* Kartu standar — lembut & modern */
+    .card { @apply rounded-2xl border border-line bg-surface shadow-card; }
+
+    /* Chip ikon berwarna untuk kartu statistik */
+    .stat-ico { @apply grid h-10 w-10 flex-none place-items-center rounded-xl; }
+
     /* Soft accent chip / active pill — readable in both modes */
     .chip-accent { @apply bg-accent-50 text-accent-700; }
     .dark .chip-accent { background: rgb(var(--c-accent-500) / 0.16); color: rgb(var(--c-accent-300)); }

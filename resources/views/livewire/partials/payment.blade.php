@@ -116,7 +116,7 @@
 
                 <div class="mt-4 flex-1">
                     @if ($method === 'CASH')
-                        <div class="rounded-2xl border border-line bg-surface p-4">
+                        <div class="card p-4">
                             <div class="text-xs font-semibold text-ink-soft">Uang diterima</div>
                             <div class="text-3xl font-extrabold tabular-nums"><span class="mr-1 text-lg text-ink-faint">Rp</span>{{ number_format($received, 0, ',', '.') }}</div>
                             <div class="mt-2 flex justify-between border-t border-dashed border-line pt-2 text-sm">
@@ -138,7 +138,7 @@
                         </div>
                     @elseif ($method === 'QRIS')
                         <div class="flex flex-col items-center gap-3 py-6 text-center">
-                            <div class="grid h-48 w-48 place-items-center rounded-2xl border border-line bg-surface text-6xl">🔲</div>
+                            <div class="grid h-48 w-48 place-items-center card text-6xl">🔲</div>
                             <div class="text-lg font-bold tabular-nums">{{ rp($t['total']) }}</div>
                             <p class="text-sm text-ink-soft">Tunjukkan QR ke pelanggan, lalu tekan Selesaikan.</p>
                             <p class="rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-700">Catatan: QRIS asli butuh integrasi payment gateway.</p>

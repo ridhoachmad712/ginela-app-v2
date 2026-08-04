@@ -16,7 +16,12 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['"Plus Jakarta Sans"', 'Figtree', ...defaultTheme.fontFamily.sans],
+            },
+            boxShadow: {
+                card: '0 1px 2px 0 rgb(2 6 23 / 0.04), 0 12px 28px -14px rgb(2 6 23 / 0.16)',
+                soft: '0 1px 2px 0 rgb(2 6 23 / 0.05)',
+                pop: '0 10px 40px -12px rgb(2 6 23 / 0.28)',
             },
             colors: {
                 base: withVar('--c-base'),

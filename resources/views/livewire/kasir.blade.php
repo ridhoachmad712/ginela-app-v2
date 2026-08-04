@@ -30,7 +30,7 @@
                         $min = $p->variants->min(fn ($v) => $channel === 'ONLINE' ? $v->online_price : $v->offline_price);
                         $out = $stock <= 0;
                     @endphp
-                    <div wire:key="p-{{ $p->id }}" class="flex animate-fade-in flex-col gap-2 rounded-2xl border border-line bg-surface p-3 transition hover:-translate-y-0.5 hover:border-accent-600 hover:shadow-md">
+                    <div wire:key="p-{{ $p->id }}" class="flex animate-fade-in flex-col gap-2 card p-3 transition hover:-translate-y-0.5 hover:border-accent-600 hover:shadow-md">
                         <div class="flex items-start justify-between">
                             <span class="grid h-12 w-12 place-items-center overflow-hidden rounded-xl bg-surface-3 text-2xl">
                                 @if ($p->image_path)<img src="{{ asset('storage/' . $p->image_path) }}" class="h-full w-full object-cover">@else{{ $p->emoji ?? '📦' }}@endif
