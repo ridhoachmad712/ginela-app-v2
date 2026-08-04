@@ -24,7 +24,7 @@ export default {
                 pop: '0 10px 40px -12px rgb(2 6 23 / 0.28)',
             },
             colors: {
-                base: withVar('--c-base'),
+                page: withVar('--c-base'),
                 surface: {
                     DEFAULT: withVar('--c-surface'),
                     2: withVar('--c-surface-2'),

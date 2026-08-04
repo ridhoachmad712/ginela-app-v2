@@ -20,7 +20,7 @@
     </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="h-full bg-base text-ink antialiased">
+<body class="h-full bg-page text-ink antialiased">
 <div class="flex min-h-[100dvh] flex-col md:flex-row">
     {{-- Panel brand --}}
     <div class="relative flex flex-col justify-center gap-8 overflow-hidden bg-gradient-to-br from-accent-600 to-sky-500 p-8 text-white md:w-1/2 md:p-12">

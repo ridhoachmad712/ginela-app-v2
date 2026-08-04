@@ -32,7 +32,7 @@
         }
     </style>
 </head>
-<body class="h-full bg-base text-ink antialiased">
+<body class="h-full bg-page text-ink antialiased">
 @php
     $nav = [
         ['url' => '/dashboard', 'label' => 'Beranda', 'icon' => 'M3 12l9-9 9 9M5 10v10h14V10'],
