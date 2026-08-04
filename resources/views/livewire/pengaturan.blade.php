@@ -57,8 +57,10 @@
                     <input wire:model="discPct" inputmode="numeric" @disabled(!$isAdmin) class="h-11 rounded-xl border border-line px-3 text-sm disabled:opacity-60"></label>
                 <label class="flex flex-col gap-1.5"><span class="text-xs font-semibold text-ink-soft">Poin per Rp1.000</span>
                     <input wire:model="pointPer1000" inputmode="numeric" @disabled(!$isAdmin) class="h-11 rounded-xl border border-line px-3 text-sm disabled:opacity-60"></label>
+                <label class="flex flex-col gap-1.5"><span class="text-xs font-semibold text-ink-soft">Selisih harga offline (%)</span>
+                    <input wire:model="offlineDiscPct" inputmode="decimal" @disabled(!$isAdmin) class="h-11 rounded-xl border border-line px-3 text-sm disabled:opacity-60"></label>
             </div>
-            <p class="rounded-lg bg-surface-3 px-3 py-2 text-xs text-ink-soft">Toko non-PKP: setel <b>Pajak = 0</b>. Perubahan langsung berlaku di kasir, pembayaran &amp; struk.</p>
+            <p class="rounded-lg bg-surface-3 px-3 py-2 text-xs text-ink-soft">Toko non-PKP: setel <b>Pajak = 0</b>. <b>Selisih harga offline</b> = seberapa murah harga offline dari online (mis. 10% → offline = online − 10%). Perubahan langsung berlaku di perhitungan harga.</p>
         </section>
 
         {{-- Tampilan --}}

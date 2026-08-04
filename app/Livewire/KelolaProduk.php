@@ -43,6 +43,10 @@ class KelolaProduk extends Component
 
     public ?int $catDeleting = null;
 
+    public string $catAdmin = '0';
+
+    public string $catService = '0';
+
     public ?string $catError = null;
 
     // Form info
@@ -161,7 +165,14 @@ class KelolaProduk extends Component
     {
         $this->catName = '';
         $this->catEditId = null;
+        $this->catAdmin = '0';
+        $this->catService = '0';
         $this->catError = null;
+    }
+
+    private function fmtPct($rate): string
+    {
+        return rtrim(rtrim(number_format((float) $rate * 100, 2, '.', ''), '0'), '.') ?: '0';
     }
 
     public function editCat(int $id): void
@@ -175,6 +186,8 @@ class KelolaProduk extends Component
         }
         $this->catEditId = $id;
         $this->catName = $c->name;
+        $this->catAdmin = $this->fmtPct($c->shopee_admin_rate);
+        $this->catService = $this->fmtPct($c->shopee_service_rate);
         $this->catError = null;
     }
 
@@ -197,12 +210,23 @@ class KelolaProduk extends Component
 
             return;
         }
+        $pct = fn ($v) => is_numeric($v) && (float) $v >= 0 && (float) $v <= 100;
+        if (! $pct($this->catAdmin) || ! $pct($this->catService)) {
+            $this->catError = 'Fee admin & layanan harus 0–100%.';
+
+            return;
+        }
+        $data = [
+            'name' => $name,
+            'shopee_admin_rate' => (float) $this->catAdmin / 100,
+            'shopee_service_rate' => (float) $this->catService / 100,
+        ];
 
         if ($this->catEditId) {
-            Category::where('id', $this->catEditId)->update(['name' => $name]);
+            Category::where('id', $this->catEditId)->update($data);
             $msg = 'Kategori diperbarui';
         } else {
-            Category::create(['name' => $name, 'sort_order' => (int) Category::max('sort_order') + 1]);
+            Category::create($data + ['sort_order' => (int) Category::max('sort_order') + 1]);
             $msg = 'Kategori ditambahkan';
         }
         $this->resetCatForm();
@@ -324,8 +348,8 @@ class KelolaProduk extends Component
             return;
         }
         foreach ($this->rows as $r) {
-            if ((int) $r['offline'] <= 0 || (int) $r['online'] <= 0) {
-                $this->error = 'Harga offline & online tiap varian harus lebih dari 0.';
+            if ((int) $r['online'] <= 0) {
+                $this->error = 'Harga online tiap varian harus lebih dari 0.';
 
                 return;
             }
@@ -335,8 +359,9 @@ class KelolaProduk extends Component
             $this->validate(['photo' => 'image|max:2048']);
         }
         $imagePath = $this->photo ? $this->photo->store('products', 'public') : null;
+        $offDisc = (float) \App\Models\StoreSetting::current()->offline_discount_rate;
 
-        DB::transaction(function () use ($pa, $imagePath) {
+        DB::transaction(function () use ($pa, $imagePath, $offDisc) {
             $product = Product::create([
                 'name' => trim($this->fName),
                 'category_id' => $this->fCategory ? (int) $this->fCategory : null,
@@ -352,9 +377,10 @@ class KelolaProduk extends Component
                 }
             }
             foreach ($this->rows as $r) {
+                $online = (int) $r['online'];
                 $v = $product->variants()->create([
                     'label' => implode(' / ', $r['combo']),
-                    'offline_price' => (int) $r['offline'], 'online_price' => (int) $r['online'],
+                    'offline_price' => (int) round($online * (1 - $offDisc)), 'online_price' => $online,
                     'cost_price' => (int) ($r['cost'] ?: 0), 'stock' => (int) ($r['stock'] ?: 0),
                     'min_stock' => (int) ($r['min'] ?: 5),
                 ]);
@@ -412,12 +438,20 @@ class KelolaProduk extends Component
 
             return;
         }
+        foreach ($this->editRows as $r) {
+            if ((int) $r['online'] <= 0) {
+                $this->error = 'Harga online tiap varian harus lebih dari 0.';
+
+                return;
+            }
+        }
         if ($this->photo) {
             $this->validate(['photo' => 'image|max:2048']);
         }
         $newImage = $this->photo ? $this->photo->store('products', 'public') : null;
+        $offDisc = (float) \App\Models\StoreSetting::current()->offline_discount_rate;
 
-        DB::transaction(function () use ($newImage) {
+        DB::transaction(function () use ($newImage, $offDisc) {
             $data = [
                 'name' => trim($this->fName),
                 'category_id' => $this->fCategory ? (int) $this->fCategory : null,
@@ -429,8 +463,9 @@ class KelolaProduk extends Component
             }
             Product::where('id', $this->editId)->update($data);
             foreach ($this->editRows as $r) {
+                $online = (int) $r['online'];
                 \App\Models\ProductVariant::where('id', $r['id'])->update([
-                    'offline_price' => (int) $r['offline'], 'online_price' => (int) $r['online'],
+                    'offline_price' => (int) round($online * (1 - $offDisc)), 'online_price' => $online,
                     'cost_price' => (int) ($r['cost'] ?: 0), 'stock' => (int) ($r['stock'] ?: 0),
                     'min_stock' => (int) ($r['min'] ?: 5), 'is_active' => (bool) $r['active'],
                 ]);
@@ -460,6 +495,9 @@ class KelolaProduk extends Component
 
     public function render()
     {
-        return view('livewire.kelola-produk');
+        $feeMap = $this->categories->mapWithKeys(fn ($c) => [$c->id => round($c->shopeeFeeRate(), 4)])->all();
+        $offlineDisc = (float) \App\Models\StoreSetting::current()->offline_discount_rate;
+
+        return view('livewire.kelola-produk', compact('feeMap', 'offlineDisc'));
     }
 }

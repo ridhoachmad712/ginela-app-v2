@@ -30,6 +30,8 @@ class Pengaturan extends Component
 
     public string $pointPer1000 = '';
 
+    public string $offlineDiscPct = '';
+
     public string $themeColor = 'blue';
 
     public const THEMES = ['blue', 'green', 'violet', 'rose', 'orange', 'teal'];
@@ -48,6 +50,7 @@ class Pengaturan extends Component
         $this->taxPct = (string) round($s->tax_rate * 100);
         $this->discPct = (string) round($s->member_discount_rate * 100);
         $this->pointPer1000 = (string) round($s->point_per_rupiah * 1000);
+        $this->offlineDiscPct = rtrim(rtrim(number_format($s->offline_discount_rate * 100, 2, '.', ''), '0'), '.') ?: '0';
         $this->existingLogo = $s->logo_path;
         $this->themeColor = in_array($s->theme_color, self::THEMES, true) ? $s->theme_color : 'blue';
     }
@@ -77,6 +80,11 @@ class Pengaturan extends Component
 
             return;
         }
+        if (! $pct($this->offlineDiscPct)) {
+            $this->error = 'Selisih harga offline harus 0–100%.';
+
+            return;
+        }
 
         if ($this->logo) {
             $this->validate(['logo' => 'image|max:1024']);
@@ -88,6 +96,7 @@ class Pengaturan extends Component
             'tax_rate' => (float) $this->taxPct / 100,
             'member_discount_rate' => (float) $this->discPct / 100,
             'point_per_rupiah' => (float) $this->pointPer1000 / 1000,
+            'offline_discount_rate' => (float) $this->offlineDiscPct / 100,
             'theme_color' => in_array($this->themeColor, self::THEMES, true) ? $this->themeColor : 'blue',
         ];
         if ($this->logo) {
