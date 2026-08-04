@@ -68,6 +68,22 @@ class KelolaProduk extends Component
     public function mount(): void
     {
         $this->isAdmin = (bool) auth()->user()?->isAdmin();
+        if ($eid = (int) request()->integer('edit')) {
+            $this->openEdit($eid);
+        }
+    }
+
+    #[Computed]
+    public function stats(): array
+    {
+        $variants = \App\Models\ProductVariant::whereHas('product', fn ($q) => $q->where('is_active', true))
+            ->get(['stock', 'cost_price', 'min_stock']);
+
+        return [
+            'products' => Product::where('is_active', true)->count(),
+            'invValue' => (int) $variants->sum(fn ($v) => $v->stock * $v->cost_price),
+            'lowStock' => $variants->filter(fn ($v) => $v->stock <= $v->min_stock)->count(),
+        ];
     }
 
     #[Computed]

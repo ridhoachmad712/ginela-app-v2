@@ -16,6 +16,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', Dashboard::class)->name('dashboard');
     Route::get('/kasir', Kasir::class)->name('kasir');
     Route::get('/produk', KelolaProduk::class)->name('produk');
+    Route::get('/produk/{product}', \App\Livewire\ProdukDetail::class)->name('produk.detail');
     Route::get('/stok', Stok::class)->name('stok');
     Route::get('/transaksi', Riwayat::class)->name('transaksi');
     Route::get('/laporan', Laporan::class)->name('laporan');

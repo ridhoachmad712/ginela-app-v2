@@ -33,6 +33,23 @@
 
     <div class="min-h-0 flex-1 overflow-auto px-5 py-4 pb-24 md:pb-4">
         @if ($selCat === null)
+            {{-- Ringkasan inventaris --}}
+            @php $st = $this->stats; @endphp
+            <div class="mb-4 grid grid-cols-3 gap-3">
+                <div class="card p-4">
+                    <div class="text-xs font-semibold text-ink-soft">Produk aktif</div>
+                    <div class="mt-1 text-lg font-extrabold tabular-nums sm:text-xl">{{ number_format($st['products']) }}</div>
+                </div>
+                <div class="card p-4">
+                    <div class="text-xs font-semibold text-ink-soft">Nilai inventaris</div>
+                    <div class="mt-1 text-lg font-extrabold tabular-nums sm:text-xl">{{ rp($st['invValue']) }}</div>
+                </div>
+                <div class="card p-4">
+                    <div class="text-xs font-semibold text-ink-soft">Perlu restock</div>
+                    <div class="mt-1 text-lg font-extrabold tabular-nums sm:text-xl {{ $st['lowStock'] > 0 ? 'text-amber-600 dark:text-amber-400' : '' }}">{{ number_format($st['lowStock']) }}</div>
+                </div>
+            </div>
+
             {{-- Grid kategori --}}
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 @foreach ($this->catCards as $c)
@@ -71,7 +88,7 @@
                                     <span class="grid h-9 w-9 flex-none place-items-center overflow-hidden rounded-lg bg-surface-3 text-lg">
                                         @if ($p->image_path)<img src="{{ asset('storage/' . $p->image_path) }}" class="h-full w-full object-cover">@else{{ $p->emoji ?? '📦' }}@endif
                                     </span>
-                                    <div><div class="font-semibold">{{ $p->name }}</div><div class="text-xs text-ink-faint">{{ $p->category->name ?? '—' }} · per {{ $p->unit }}</div></div>
+                                    <div><a href="/produk/{{ $p->id }}" wire:navigate class="font-semibold transition hover:text-accent-600 hover:underline">{{ $p->name }}</a><div class="text-xs text-ink-faint">{{ $p->category->name ?? '—' }} · per {{ $p->unit }}</div></div>
                                 </div>
                             </td>
                             <td class="px-4 py-3 text-ink-soft">{{ $p->attributes->count() ? $p->variants->count().' varian' : 'Tunggal' }}</td>
@@ -82,6 +99,7 @@
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex justify-end gap-1.5">
+                                    <a href="/produk/{{ $p->id }}" wire:navigate class="rounded-lg border border-line px-2.5 py-1.5 text-xs font-semibold hover:bg-surface-3">Detail</a>
                                     <button wire:click="openEdit({{ $p->id }})" @disabled(!$isAdmin) class="rounded-lg border border-line px-2.5 py-1.5 text-xs font-semibold hover:bg-surface-3 disabled:opacity-40">Edit</button>
                                     <button wire:click="$set('deletingId', {{ $p->id }})" @disabled(!$isAdmin) class="rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40">Hapus</button>
                                 </div>
