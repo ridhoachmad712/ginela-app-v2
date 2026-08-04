@@ -282,7 +282,7 @@
                             <span class="grid h-9 w-9 flex-none place-items-center rounded-lg bg-surface-3 text-lg">🏷️</span>
                             <div class="min-w-0 flex-1">
                                 <div class="truncate font-semibold">{{ $c->name }}</div>
-                                <div class="text-xs text-ink-faint">{{ $c->products_count }} produk</div>
+                                <div class="text-xs text-ink-faint">{{ $c->products_count }} produk@php $fr = $c->shopee_admin_rate + $c->shopee_service_rate; @endphp @if ($fr > 0)· fee Shopee {{ rtrim(rtrim(number_format($fr * 100, 2), '0'), '.') }}%@endif</div>
                             </div>
                             @if ($catDeleting === $c->id)
                                 <span class="text-xs font-medium text-ink-soft">Hapus?</span>

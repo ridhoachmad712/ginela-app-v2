@@ -30,6 +30,8 @@ class ProdukDetail extends Component
             'lowStock' => $variants->filter(fn ($v) => $v->stock <= $v->min_stock)->count(),
         ];
 
-        return view('livewire.produk-detail', compact('variants', 'summary'));
+        $feeRate = $this->product->category?->shopeeFeeRate() ?? 0.0;
+
+        return view('livewire.produk-detail', compact('variants', 'summary', 'feeRate'));
     }
 }

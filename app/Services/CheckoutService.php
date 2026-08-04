@@ -22,13 +22,14 @@ class CheckoutService
             return ['ok' => false, 'error' => 'Keranjang kosong.'];
         }
 
-        $variants = ProductVariant::with('product')->whereIn('id', array_keys($cart))->get()->keyBy('id');
+        $variants = ProductVariant::with('product.category')->whereIn('id', array_keys($cart))->get()->keyBy('id');
         $s = StoreSetting::current();
         $priceOf = fn ($v) => $channel === 'ONLINE' ? $v->online_price : $v->offline_price;
 
         // Server = otoritas: hitung ulang dari harga DB.
         $subtotal = 0;
         $cost = 0;
+        $shopeeFee = 0; // potongan Shopee (admin+layanan) — hanya untuk penjualan ONLINE
         foreach ($cart as $vid => $line) {
             $v = $variants[$vid] ?? null;
             if (! $v) {
@@ -45,6 +46,10 @@ class CheckoutService
             }
             $subtotal += $priceOf($v) * $qty;
             $cost += $v->cost_price * $qty;
+            if ($channel === 'ONLINE') {
+                $rate = $v->product->category?->shopeeFeeRate() ?? 0.0;
+                $shopeeFee += (int) round($v->online_price * $qty * $rate);
+            }
         }
 
         $member = $memberId ? Member::find($memberId) : null;
@@ -58,7 +63,7 @@ class CheckoutService
         $after = $subtotal - $discount;
         $tax = (int) round($after * $s->tax_rate);
         $total = $after + $tax;
-        $profit = $after - $cost;
+        $profit = $after - $cost - $shopeeFee; // laba bersih sesudah modal & fee Shopee
         $pointsEarned = $hasMember ? (int) floor($after * $s->point_per_rupiah) : 0;
 
         if ($method === 'CASH' && $paid < $total) {

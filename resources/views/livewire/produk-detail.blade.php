@@ -46,58 +46,70 @@
             @endforeach
         </div>
 
-        {{-- Tabel varian: modal, harga, margin, stok, nilai --}}
+        {{-- Tabel varian: modal, harga, laba online (potong fee Shopee), margin, laba offline --}}
         <div class="overflow-x-auto card">
-            <div class="border-b border-line px-5 py-3">
-                <h2 class="text-sm font-bold">Rincian Varian</h2>
-                <p class="text-xs text-ink-faint">Modal, harga, margin, dan nilai stok tiap varian</p>
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3">
+                <div>
+                    <h2 class="text-sm font-bold">Rincian Varian</h2>
+                    <p class="text-xs text-ink-faint">Laba online = harga online − (modal + fee Shopee)</p>
+                </div>
+                @if ($feeRate > 0)
+                    <span class="rounded-lg bg-surface-3 px-2.5 py-1 text-xs font-semibold text-ink-soft">Fee Shopee {{ $product->category->name }}: {{ rtrim(rtrim(number_format($feeRate * 100, 2), '0'), '.') }}%</span>
+                @endif
             </div>
-            <table class="w-full min-w-[860px] border-collapse text-sm">
+            <table class="w-full min-w-[960px] border-collapse text-sm">
                 <thead>
                     <tr class="border-b border-line bg-surface-2 text-left text-xs uppercase tracking-wide text-ink-soft">
                         <th class="px-4 py-3 font-semibold">Varian</th>
                         <th class="px-4 py-3 font-semibold">SKU</th>
                         <th class="px-4 py-3 text-right font-semibold">Modal</th>
-                        <th class="px-4 py-3 text-right font-semibold">Offline</th>
                         <th class="px-4 py-3 text-right font-semibold">Online</th>
+                        <th class="px-4 py-3 text-right font-semibold">Laba online</th>
                         <th class="px-4 py-3 text-right font-semibold">Margin</th>
+                        <th class="px-4 py-3 text-right font-semibold">Offline</th>
+                        <th class="px-4 py-3 text-right font-semibold">Laba offline</th>
                         <th class="px-4 py-3 text-right font-semibold">Stok</th>
-                        <th class="px-4 py-3 text-right font-semibold">Nilai stok</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($variants as $v)
                         @php
-                            $mOff = $v->offline_price > 0 ? round(($v->offline_price - $v->cost_price) / $v->offline_price * 100) : 0;
-                            $mOn = $v->online_price > 0 ? round(($v->online_price - $v->cost_price) / $v->online_price * 100) : 0;
+                            $hppOn = $v->cost_price + round($v->online_price * $feeRate);
+                            $labaOn = $v->online_price - $hppOn;
+                            $marginOn = $hppOn > 0 ? round($labaOn / $hppOn * 100) : 0;
+                            $labaOff = $v->offline_price - $v->cost_price;
                             $lowV = $v->stock <= $v->min_stock;
                         @endphp
                         <tr wire:key="v-{{ $v->id }}" class="border-b border-line-soft last:border-0">
                             <td class="px-4 py-3 font-semibold">{{ $v->label ?: 'Tunggal' }}</td>
                             <td class="px-4 py-3 font-mono text-xs text-ink-soft">{{ $v->sku ?: '—' }}</td>
                             <td class="px-4 py-3 text-right tabular-nums text-ink-soft">{{ $v->cost_price ? rp($v->cost_price) : '—' }}</td>
-                            <td class="px-4 py-3 text-right font-semibold tabular-nums">{{ rp($v->offline_price) }}</td>
-                            <td class="px-4 py-3 text-right tabular-nums">{{ rp($v->online_price) }}</td>
+                            <td class="px-4 py-3 text-right font-semibold tabular-nums">{{ rp($v->online_price) }}</td>
+                            <td class="px-4 py-3 text-right tabular-nums {{ $labaOn >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600' }}">{{ rp($labaOn) }}</td>
                             <td class="px-4 py-3 text-right tabular-nums">
                                 @if ($v->cost_price > 0)
-                                    <span class="font-semibold {{ $mOff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600' }}">{{ $mOff }}%</span>
-                                    <span class="text-xs text-ink-faint"> / {{ $mOn }}%</span>
+                                    <span class="font-semibold {{ $marginOn >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600' }}">{{ $marginOn }}%</span>
                                 @else
                                     <span class="text-ink-faint">—</span>
                                 @endif
                             </td>
+                            <td class="px-4 py-3 text-right font-semibold tabular-nums">{{ rp($v->offline_price) }}</td>
+                            <td class="px-4 py-3 text-right tabular-nums {{ $labaOff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600' }}">{{ rp($labaOff) }}</td>
                             <td class="px-4 py-3 text-right">
                                 <span class="rounded-full px-2 py-0.5 text-xs font-bold {{ $v->stock === 0 ? 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400' : ($lowV ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400' : 'bg-green-100 text-green-700 dark:bg-emerald-500/15 dark:text-emerald-400') }}">
                                     {{ $v->stock }}{{ $lowV ? ' · min '.$v->min_stock : '' }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-right font-semibold tabular-nums text-ink-soft">{{ rp($v->stock * $v->cost_price) }}</td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
         </div>
 
-        <p class="text-xs text-ink-faint">Margin = (harga − modal) ÷ harga. Nilai inventaris = stok × modal. Untuk mengubah modal/harga/stok, tekan <b>Edit Produk</b>.</p>
+        <p class="text-xs text-ink-faint">
+            <b>Online</b>: laba = harga online − modal − fee Shopee ({{ rtrim(rtrim(number_format($feeRate * 100, 2), '0'), '.') }}%). ·
+            <b>Offline</b>: laba = harga offline − modal (tanpa fee). ·
+            Nilai inventaris = stok × modal. Ubah angka lewat <b>Edit Produk</b>.
+        </p>
     </div>
 </div>
