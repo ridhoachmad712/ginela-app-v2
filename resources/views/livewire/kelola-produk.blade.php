@@ -12,7 +12,15 @@
                 <span class="text-sm text-ink-faint">Pilih kategori</span>
             @endif
             @if ($isAdmin)
-                <button wire:click="openNew" class="ml-auto rounded-xl bg-accent-600 px-4 py-2 text-sm font-semibold text-white hover:bg-accent-700">+ Tambah Produk</button>
+                <div class="ml-auto flex items-center gap-2">
+                    @if ($selCat === null)
+                        <button wire:click="openCatModal" class="flex items-center gap-1.5 rounded-xl border border-line px-4 py-2 text-sm font-semibold text-ink-soft transition hover:bg-surface-3 hover:text-ink">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.6 13.4A2 2 0 0021 12l-.4-1.4 1-1.6-1.4-1.4-1.6 1L17 8.2 15.6 3h-2L12 4.4 10.4 3.4 9 4.8 7.4 3.8 6 5.2M3 7h4l2 2h11a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1z"/><circle cx="12" cy="14" r="2.5"/></svg>
+                            Kelola Kategori
+                        </button>
+                    @endif
+                    <button wire:click="openNew" class="rounded-xl bg-accent-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-700">+ Tambah Produk</button>
+                </div>
             @endif
         </div>
         @if ($selCat !== null)
@@ -215,6 +223,69 @@
                 <div class="mt-5 flex gap-3">
                     <button wire:click="$set('deletingId', null)" class="h-12 flex-1 rounded-xl border border-line font-semibold">Batal</button>
                     <button wire:click="deleteProduct" class="h-12 flex-1 rounded-xl bg-red-600 font-semibold text-white">Hapus</button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Modal Kelola Kategori --}}
+    @if ($catModal)
+        <div class="fixed inset-0 z-[55] flex items-end justify-center bg-black/40 sm:items-center sm:p-4" wire:key="cat-modal">
+            <div class="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-3xl bg-surface shadow-pop sm:rounded-3xl">
+                <div class="flex items-center gap-2 border-b border-line px-5 py-4">
+                    <h2 class="text-lg font-bold tracking-tight">Kelola Kategori</h2>
+                    <button wire:click="closeCatModal" class="ml-auto grid h-9 w-9 place-items-center rounded-lg text-ink-faint transition hover:bg-surface-3 hover:text-ink" aria-label="Tutup">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                {{-- Form tambah / edit --}}
+                <div class="border-b border-line px-5 py-4">
+                    <div class="flex items-end gap-2">
+                        <label class="flex flex-1 flex-col gap-1">
+                            <span class="text-xs font-semibold text-ink-soft">{{ $catEditId ? 'Edit nama kategori' : 'Kategori baru' }}</span>
+                            <input wire:model="catName" wire:keydown.enter="saveCat" placeholder="mis. Minuman"
+                                   class="h-11 rounded-xl border border-line bg-surface px-3 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-100">
+                        </label>
+                        <button wire:click="saveCat" class="h-11 flex-none rounded-xl bg-accent-600 px-4 text-sm font-bold text-white transition hover:bg-accent-700">
+                            {{ $catEditId ? 'Simpan' : 'Tambah' }}
+                        </button>
+                        @if ($catEditId)
+                            <button wire:click="resetCatForm" class="h-11 flex-none rounded-xl border border-line px-3 text-sm font-semibold text-ink-soft hover:bg-surface-3">Batal</button>
+                        @endif
+                    </div>
+                    @if ($catError)<p class="mt-2 text-xs font-medium text-red-600">{{ $catError }}</p>@endif
+                </div>
+
+                {{-- Daftar kategori --}}
+                <div class="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+                    @forelse ($this->categories as $c)
+                        <div wire:key="catm-{{ $c->id }}" class="flex items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-surface-2">
+                            <span class="grid h-9 w-9 flex-none place-items-center rounded-lg bg-surface-3 text-lg">🏷️</span>
+                            <div class="min-w-0 flex-1">
+                                <div class="truncate font-semibold">{{ $c->name }}</div>
+                                <div class="text-xs text-ink-faint">{{ $c->products_count }} produk</div>
+                            </div>
+                            @if ($catDeleting === $c->id)
+                                <span class="text-xs font-medium text-ink-soft">Hapus?</span>
+                                <button wire:click="deleteCat" class="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white">Ya</button>
+                                <button wire:click="cancelDeleteCat" class="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-soft">Batal</button>
+                            @else
+                                <button wire:click="editCat({{ $c->id }})" class="grid h-8 w-8 flex-none place-items-center rounded-lg text-ink-faint transition hover:bg-surface-3 hover:text-accent-600" aria-label="Edit">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>
+                                </button>
+                                <button wire:click="askDeleteCat({{ $c->id }})" class="grid h-8 w-8 flex-none place-items-center rounded-lg text-ink-faint transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/15" aria-label="Hapus">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                                </button>
+                            @endif
+                        </div>
+                    @empty
+                        <p class="py-8 text-center text-sm text-ink-faint">Belum ada kategori. Tambahkan di atas.</p>
+                    @endforelse
+                </div>
+
+                <div class="border-t border-line px-5 py-3">
+                    <p class="text-xs text-ink-faint">Menghapus kategori <b>tidak</b> menghapus produknya — produk menjadi "Tanpa Kategori".</p>
                 </div>
             </div>
         </div>

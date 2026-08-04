@@ -34,6 +34,17 @@ class KelolaProduk extends Component
 
     public ?string $error = null;
 
+    // Kelola kategori
+    public bool $catModal = false;
+
+    public string $catName = '';
+
+    public ?int $catEditId = null;
+
+    public ?int $catDeleting = null;
+
+    public ?string $catError = null;
+
     // Form info
     public string $fName = '';
 
@@ -76,7 +87,8 @@ class KelolaProduk extends Component
     #[Computed]
     public function categories()
     {
-        return Category::orderBy('sort_order')->get();
+        return Category::withCount(['products' => fn ($q) => $q->where('is_active', true)])
+            ->orderBy('sort_order')->get();
     }
 
     #[Computed]
@@ -109,6 +121,105 @@ class KelolaProduk extends Component
     {
         $this->selCat = null;
         $this->q = '';
+    }
+
+    // ---------- Kelola Kategori ----------
+    public function openCatModal(): void
+    {
+        if (! $this->guardAdmin()) {
+            return;
+        }
+        $this->resetCatForm();
+        $this->catDeleting = null;
+        $this->catModal = true;
+    }
+
+    public function closeCatModal(): void
+    {
+        $this->catModal = false;
+        $this->resetCatForm();
+        $this->catDeleting = null;
+    }
+
+    public function resetCatForm(): void
+    {
+        $this->catName = '';
+        $this->catEditId = null;
+        $this->catError = null;
+    }
+
+    public function editCat(int $id): void
+    {
+        if (! $this->guardAdmin()) {
+            return;
+        }
+        $c = Category::find($id);
+        if (! $c) {
+            return;
+        }
+        $this->catEditId = $id;
+        $this->catName = $c->name;
+        $this->catError = null;
+    }
+
+    public function saveCat(): void
+    {
+        if (! $this->guardAdmin()) {
+            return;
+        }
+        $name = trim($this->catName);
+        if ($name === '') {
+            $this->catError = 'Nama kategori wajib diisi.';
+
+            return;
+        }
+        $dupe = Category::whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
+            ->when($this->catEditId, fn ($q) => $q->where('id', '!=', $this->catEditId))
+            ->exists();
+        if ($dupe) {
+            $this->catError = 'Kategori "'.$name.'" sudah ada.';
+
+            return;
+        }
+
+        if ($this->catEditId) {
+            Category::where('id', $this->catEditId)->update(['name' => $name]);
+            $msg = 'Kategori diperbarui';
+        } else {
+            Category::create(['name' => $name, 'sort_order' => (int) Category::max('sort_order') + 1]);
+            $msg = 'Kategori ditambahkan';
+        }
+        $this->resetCatForm();
+        unset($this->categories, $this->catCards, $this->products);
+        $this->dispatch('toast', message: $msg, type: 'success');
+    }
+
+    public function askDeleteCat(int $id): void
+    {
+        $this->catDeleting = $id;
+        $this->catError = null;
+    }
+
+    public function cancelDeleteCat(): void
+    {
+        $this->catDeleting = null;
+    }
+
+    public function deleteCat(): void
+    {
+        if (! $this->guardAdmin() || ! $this->catDeleting) {
+            return;
+        }
+        DB::transaction(function () {
+            Product::where('category_id', $this->catDeleting)->update(['category_id' => null]);
+            Category::where('id', $this->catDeleting)->delete();
+        });
+        if ($this->catEditId === $this->catDeleting) {
+            $this->resetCatForm();
+        }
+        $this->catDeleting = null;
+        unset($this->categories, $this->catCards, $this->products);
+        $this->dispatch('toast', message: 'Kategori dihapus', type: 'info');
     }
 
     private function guardAdmin(): bool
