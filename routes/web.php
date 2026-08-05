@@ -21,6 +21,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/transaksi', Riwayat::class)->name('transaksi');
     Route::get('/laporan', Laporan::class)->name('laporan');
     Route::get('/pengaturan', Pengaturan::class)->name('pengaturan');
+    Route::get('/pengguna', \App\Livewire\Pengguna::class)->name('pengguna');
 });
 
 Route::view('profile', 'profile')->middleware(['auth'])->name('profile');

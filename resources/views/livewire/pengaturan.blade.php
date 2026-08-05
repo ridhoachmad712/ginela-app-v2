@@ -14,6 +14,17 @@
             <div class="rounded-xl bg-amber-100 px-3 py-2.5 text-sm font-medium text-amber-700">Hanya admin yang dapat mengubah pengaturan. Kamu hanya bisa melihat.</div>
         @endunless
 
+        @if ($isAdmin)
+            <a href="/pengguna" wire:navigate class="flex items-center gap-3 card p-4 transition hover:border-accent-600">
+                <div class="stat-ico chip-accent text-lg">👥</div>
+                <div class="min-w-0 flex-1">
+                    <div class="font-semibold">Kelola Pengguna</div>
+                    <div class="text-xs text-ink-faint">Atur akun Admin &amp; Kasir, ganti kata sandi</div>
+                </div>
+                <svg class="h-5 w-5 flex-none text-ink-faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+            </a>
+        @endif
+
         {{-- Identitas --}}
         <section class="flex flex-col gap-4 card p-5">
             <h2 class="text-sm font-bold">Identitas Toko</h2>

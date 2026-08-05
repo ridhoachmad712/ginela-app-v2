@@ -43,6 +43,9 @@
         ['url' => '/laporan', 'label' => 'Laporan', 'icon' => 'M3 3v18h18M7 14l3-3 3 2 4-5'],
         ['url' => '/pengaturan', 'label' => 'Atur', 'icon' => 'M12 9a3 3 0 100 6 3 3 0 000-6z'],
     ];
+    if (auth()->user()?->isAdmin()) {
+        array_splice($nav, 6, 0, [['url' => '/pengguna', 'label' => 'Pengguna', 'icon' => 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8']]);
+    }
     $path = request()->path();
 @endphp
 
