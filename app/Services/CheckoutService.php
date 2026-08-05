@@ -2,34 +2,36 @@
 
 namespace App\Services;
 
-use App\Models\Member;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Models\StoreSetting;
 use App\Models\Transaction;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class CheckoutService
 {
     /**
+     * Catat penjualan (Shopee/offline) yang sudah terjadi.
+     * Laba online sudah dipotong fee Shopee per kategori. Tanggal boleh lampau.
+     *
      * @param  array<int,array>  $cart  keyed by variant id, tiap item punya 'qty'
-     * @return array{ok:bool, error?:string, receipt?:array}
+     * @return array{ok:bool, error?:string, code?:string}
      */
-    public function checkout(array $cart, string $channel, ?int $memberId, string $method, int $paid): array
+    public function record(array $cart, string $channel, string $method, ?string $dateStr): array
     {
         if (empty($cart)) {
-            return ['ok' => false, 'error' => 'Keranjang kosong.'];
+            return ['ok' => false, 'error' => 'Belum ada item.'];
         }
 
         $variants = ProductVariant::with('product.category')->whereIn('id', array_keys($cart))->get()->keyBy('id');
         $s = StoreSetting::current();
         $priceOf = fn ($v) => $channel === 'ONLINE' ? $v->online_price : $v->offline_price;
 
-        // Server = otoritas: hitung ulang dari harga DB.
         $subtotal = 0;
         $cost = 0;
-        $shopeeFee = 0; // potongan Shopee (admin+layanan) — hanya untuk penjualan ONLINE
+        $shopeeFee = 0;
         foreach ($cart as $vid => $line) {
             $v = $variants[$vid] ?? null;
             if (! $v) {
@@ -52,42 +54,37 @@ class CheckoutService
             }
         }
 
-        $member = $memberId ? Member::find($memberId) : null;
-        if ($memberId && ! $member) {
-            return ['ok' => false, 'error' => 'Member tidak ditemukan.'];
-        }
-        $pointsBefore = $member?->points ?? 0;
-
-        $hasMember = (bool) $member;
-        $discount = $hasMember ? (int) round($subtotal * $s->member_discount_rate) : 0;
-        $after = $subtotal - $discount;
-        $tax = (int) round($after * $s->tax_rate);
-        $total = $after + $tax;
-        $profit = $after - $cost - $shopeeFee; // laba bersih sesudah modal & fee Shopee
-        $pointsEarned = $hasMember ? (int) floor($after * $s->point_per_rupiah) : 0;
-
-        if ($method === 'CASH' && $paid < $total) {
-            return ['ok' => false, 'error' => 'Nominal tunai kurang dari total.'];
-        }
-        $paidFinal = $method === 'CASH' ? $paid : $total;
-        $change = $method === 'CASH' ? $paidFinal - $total : 0;
-
         $cashier = Auth::user();
         if (! $cashier) {
             return ['ok' => false, 'error' => 'Sesi berakhir. Silakan login ulang.'];
         }
 
-        $trx = DB::transaction(function () use ($cart, $variants, $priceOf, $channel, $member, $cashier, $subtotal, $discount, $tax, $total, $cost, $profit, $paidFinal, $change, $method, $pointsEarned) {
-            $now = now();
-            $seq = Transaction::whereDate('created_at', $now->toDateString())->count() + 1;
-            $code = 'TRX-'.$now->format('Ymd').'-'.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+        try {
+            $date = $dateStr ? Carbon::parse($dateStr) : now();
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'error' => 'Tanggal tidak valid.'];
+        }
+        if ($date->toDateString() > now()->toDateString()) {
+            return ['ok' => false, 'error' => 'Tanggal tidak boleh di masa depan.'];
+        }
+        $when = $date->copy()->setTimeFrom(now());
+
+        $tax = (int) round($subtotal * $s->tax_rate);
+        $total = $subtotal + $tax;
+        $profit = $subtotal - $cost - $shopeeFee;
+
+        $trx = DB::transaction(function () use ($cart, $variants, $priceOf, $channel, $method, $cashier, $when, $subtotal, $tax, $total, $cost, $profit) {
+            $seq = Transaction::whereDate('created_at', $when->toDateString())->count() + 1;
+            $code = 'TRX-'.$when->format('Ymd').'-'.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
 
             $t = Transaction::create([
-                'code' => $code, 'channel' => $channel, 'cashier_id' => $cashier->id,
-                'member_id' => $member?->id, 'subtotal' => $subtotal, 'discount' => $discount,
-                'tax' => $tax, 'total' => $total, 'cost' => $cost, 'profit' => $profit,
-                'paid' => $paidFinal, 'change' => $change, 'method' => $method,
+                'code' => $code, 'channel' => $channel, 'cashier_id' => $cashier->id, 'member_id' => null,
+                'subtotal' => $subtotal, 'discount' => 0, 'tax' => $tax, 'total' => $total,
+                'cost' => $cost, 'profit' => $profit, 'paid' => $total, 'change' => 0,
+                'method' => $method, 'status' => 'COMPLETED',
             ]);
+            // Backdate ke tanggal penjualan (tanpa mengubah updated_at via timestamps otomatis)
+            Transaction::where('id', $t->id)->update(['created_at' => $when, 'updated_at' => $when]);
 
             foreach ($cart as $vid => $line) {
                 $v = $variants[$vid];
@@ -107,29 +104,9 @@ class CheckoutService
                 ]);
             }
 
-            if ($member && $pointsEarned > 0) {
-                $member->increment('points', $pointsEarned);
-            }
-
             return $t;
         });
 
-        $lines = [];
-        foreach ($cart as $vid => $line) {
-            $v = $variants[$vid];
-            $lines[] = [
-                'name' => $v->product->name.($v->label ? " ({$v->label})" : ''),
-                'price' => $priceOf($v), 'qty' => (int) $line['qty'],
-            ];
-        }
-
-        return ['ok' => true, 'receipt' => [
-            'code' => $trx->code, 'at' => $trx->created_at->timestamp,
-            'method' => $method, 'channel' => $channel, 'cashier' => $cashier->name,
-            'member' => $member ? ['name' => $member->name, 'points' => $pointsBefore] : null,
-            'lines' => $lines, 'subtotal' => $subtotal, 'discount' => $discount,
-            'tax' => $tax, 'total' => $total, 'paid' => $paidFinal, 'change' => $change,
-            'pointsEarned' => $pointsEarned,
-        ]];
+        return ['ok' => true, 'code' => $trx->code];
     }
 }
