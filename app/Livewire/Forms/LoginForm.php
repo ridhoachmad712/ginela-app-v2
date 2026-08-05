@@ -2,8 +2,10 @@
 
 namespace App\Livewire\Forms;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -12,8 +14,8 @@ use Livewire\Form;
 
 class LoginForm extends Form
 {
-    #[Validate('required|string|email')]
-    public string $email = '';
+    #[Validate('required|string|in:ADMIN,KASIR')]
+    public string $role = 'ADMIN';
 
     #[Validate('required|string')]
     public string $password = '';
@@ -22,7 +24,7 @@ class LoginForm extends Form
     public bool $remember = false;
 
     /**
-     * Attempt to authenticate the request's credentials.
+     * Autentikasi berdasarkan role + password (satu pengguna per role).
      *
      * @throws ValidationException
      */
@@ -30,19 +32,23 @@ class LoginForm extends Form
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only(['email', 'password']), $this->remember)) {
+        $user = User::where('role', $this->role)->where('is_active', true)->first();
+
+        if (! $user || ! Hash::check($this->password, $user->password)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'form.email' => trans('auth.failed'),
+                'form.password' => 'Kata sandi salah.',
             ]);
         }
+
+        Auth::login($user, $this->remember);
 
         RateLimiter::clear($this->throttleKey());
     }
 
     /**
-     * Ensure the authentication request is not rate limited.
+     * Pastikan percobaan login tidak melebihi batas.
      */
     protected function ensureIsNotRateLimited(): void
     {
@@ -55,7 +61,7 @@ class LoginForm extends Form
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'form.email' => trans('auth.throttle', [
+            'form.password' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
@@ -63,10 +69,10 @@ class LoginForm extends Form
     }
 
     /**
-     * Get the authentication rate limiting throttle key.
+     * Kunci pembatasan laju login (per role + IP).
      */
     protected function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->email).'|'.request()->ip());
+        return Str::transliterate(Str::lower($this->role).'|'.request()->ip());
     }
 }
