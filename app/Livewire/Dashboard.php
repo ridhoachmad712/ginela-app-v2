@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Models\Category;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
@@ -13,15 +15,27 @@ use Livewire\Component;
 class Dashboard extends Component
 {
     #[Computed]
-    public function today(): array
+    public function inventory(): array
     {
-        $from = now()->startOfDay();
-        $agg = Transaction::where('created_at', '>=', $from)->where('status', 'COMPLETED')
-            ->selectRaw('COALESCE(SUM(total),0) as penjualan, COALESCE(SUM(profit),0) as laba, COUNT(*) as jml')
-            ->first();
-        $items = TransactionItem::whereHas('transaction', fn ($q) => $q->where('created_at', '>=', $from)->where('status', 'COMPLETED'))->sum('qty');
+        $variants = ProductVariant::where('is_active', true)
+            ->whereHas('product', fn ($q) => $q->where('is_active', true))
+            ->get(['stock', 'cost_price', 'min_stock']);
 
-        return ['penjualan' => (int) $agg->penjualan, 'laba' => (int) $agg->laba, 'jml' => (int) $agg->jml, 'item' => (int) $items];
+        return [
+            'invValue' => (int) $variants->sum(fn ($v) => $v->stock * $v->cost_price),
+            'products' => Product::where('is_active', true)->count(),
+            'variants' => $variants->count(),
+            'lowStock' => $variants->filter(fn ($v) => $v->stock <= $v->min_stock)->count(),
+            'outStock' => $variants->filter(fn ($v) => $v->stock <= 0)->count(),
+        ];
+    }
+
+    #[Computed]
+    public function categoryDist()
+    {
+        return Category::withCount(['products' => fn ($q) => $q->where('is_active', true)])
+            ->orderByDesc('products_count')->get()
+            ->map(fn ($c) => ['name' => $c->name, 'count' => (int) $c->products_count]);
     }
 
     #[Computed]
@@ -35,19 +49,20 @@ class Dashboard extends Component
     }
 
     #[Computed]
-    public function recent()
+    public function today(): array
     {
-        return Transaction::with('member')->latest('id')->limit(5)->get();
+        $from = now()->startOfDay();
+        $agg = Transaction::where('created_at', '>=', $from)
+            ->selectRaw('COALESCE(SUM(total),0) as penjualan, COALESCE(SUM(profit),0) as laba, COUNT(*) as jml')
+            ->first();
+
+        return ['penjualan' => (int) $agg->penjualan, 'laba' => (int) $agg->laba, 'jml' => (int) $agg->jml];
     }
 
     #[Computed]
-    public function topToday()
+    public function recent()
     {
-        $from = now()->startOfDay();
-
-        return TransactionItem::whereHas('transaction', fn ($q) => $q->where('created_at', '>=', $from)->where('status', 'COMPLETED'))
-            ->selectRaw('name_snapshot, SUM(qty) as qty')
-            ->groupBy('name_snapshot')->orderByDesc('qty')->limit(5)->get();
+        return Transaction::latest('id')->limit(5)->get();
     }
 
     public function render()
