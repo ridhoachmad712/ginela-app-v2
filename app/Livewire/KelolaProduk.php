@@ -439,7 +439,7 @@ class KelolaProduk extends Component
 
     public function addAttr(): void
     {
-        $this->attrs[] = ['name' => '', 'opts' => ''];
+        $this->attrs[] = ['name' => '', 'options' => ['']];
     }
 
     public function removeAttr(int $i): void
@@ -448,12 +448,26 @@ class KelolaProduk extends Component
         $this->attrs = array_values($this->attrs);
     }
 
+    public function addOpt(int $i): void
+    {
+        $this->attrs[$i]['options'][] = '';
+    }
+
+    public function removeOpt(int $i, int $j): void
+    {
+        unset($this->attrs[$i]['options'][$j]);
+        $this->attrs[$i]['options'] = array_values($this->attrs[$i]['options']);
+        if (empty($this->attrs[$i]['options'])) {
+            $this->attrs[$i]['options'] = [''];
+        }
+    }
+
     private function parsedAttrs(): array
     {
         $out = [];
         foreach ($this->attrs as $a) {
-            $name = trim($a['name']);
-            $opts = array_values(array_filter(array_map('trim', explode(',', $a['opts'])), fn ($x) => $x !== ''));
+            $name = trim($a['name'] ?? '');
+            $opts = array_values(array_filter(array_map('trim', $a['options'] ?? []), fn ($x) => $x !== ''));
             if ($name !== '' && count($opts)) {
                 $out[] = ['name' => $name, 'options' => $opts];
             }
@@ -506,9 +520,8 @@ class KelolaProduk extends Component
             $this->validate(['photo' => 'image|max:2048']);
         }
         $imagePath = $this->photo ? $this->photo->store('products', 'public') : null;
-        $offDisc = (float) StoreSetting::current()->offline_discount_rate;
 
-        DB::transaction(function () use ($pa, $imagePath, $offDisc) {
+        DB::transaction(function () use ($pa, $imagePath) {
             $product = Product::create([
                 'name' => trim($this->fName),
                 'category_id' => $this->fCategory ? (int) $this->fCategory : null,
@@ -524,10 +537,9 @@ class KelolaProduk extends Component
                 }
             }
             foreach ($this->rows as $r) {
-                $online = (int) $r['online'];
                 $v = $product->variants()->create([
                     'label' => implode(' / ', $r['combo']),
-                    'offline_price' => (int) round($online * (1 - $offDisc)), 'online_price' => $online,
+                    'offline_price' => (int) ($r['offline'] ?: 0), 'online_price' => (int) $r['online'],
                     'cost_price' => (int) ($r['cost'] ?: 0), 'stock' => (int) ($r['stock'] ?: 0),
                     'min_stock' => (int) ($r['min'] ?: 5),
                 ]);
@@ -596,9 +608,8 @@ class KelolaProduk extends Component
             $this->validate(['photo' => 'image|max:2048']);
         }
         $newImage = $this->photo ? $this->photo->store('products', 'public') : null;
-        $offDisc = (float) StoreSetting::current()->offline_discount_rate;
 
-        DB::transaction(function () use ($newImage, $offDisc) {
+        DB::transaction(function () use ($newImage) {
             $data = [
                 'name' => trim($this->fName),
                 'category_id' => $this->fCategory ? (int) $this->fCategory : null,
@@ -610,9 +621,8 @@ class KelolaProduk extends Component
             }
             Product::where('id', $this->editId)->update($data);
             foreach ($this->editRows as $r) {
-                $online = (int) $r['online'];
                 ProductVariant::where('id', $r['id'])->update([
-                    'offline_price' => (int) round($online * (1 - $offDisc)), 'online_price' => $online,
+                    'offline_price' => (int) ($r['offline'] ?: 0), 'online_price' => (int) $r['online'],
                     'cost_price' => (int) ($r['cost'] ?: 0), 'stock' => (int) ($r['stock'] ?: 0),
                     'min_stock' => (int) ($r['min'] ?: 5), 'is_active' => (bool) $r['active'],
                 ]);

@@ -123,23 +123,9 @@
         @endif
     </div>
 
-    {{-- Kalkulator harga (Alpine, model Excel) --}}
-    <script>
-        if (!window.gCalc) {
-            window.fmtRp = n => 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(n || 0));
-            window.gCalc = {
-                offline: (o, d) => Math.round(o * (1 - d)),
-                labaOnline: (m, o, f) => o - (m + Math.round(o * f)),
-                margin: (m, o, f) => { const hm = m + Math.round(o * f); return hm > 0 ? Math.round((o - hm) / hm * 100) : 0; },
-            };
-        }
-    </script>
-
     {{-- ============ Modal Create / Edit ============ --}}
     @if ($mode)
-        <div class="fixed inset-0 z-[60] flex items-end justify-center sm:items-center"
-             x-data="{ feeMap: @js($feeMap), offDisc: {{ $offlineDisc }}, fee: 0 }"
-             x-init="fee = feeMap[$wire.fCategory] ?? 0">
+        <div class="fixed inset-0 z-[60] flex items-end justify-center sm:items-center">
             <div class="absolute inset-0 bg-black/50" wire:click="close"></div>
             <div class="relative flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-surface sm:max-w-2xl sm:rounded-3xl">
                 <div class="flex items-center gap-2 border-b border-line px-5 py-4">
@@ -152,7 +138,7 @@
                         <label class="col-span-2 flex flex-col gap-1.5"><span class="text-xs font-semibold text-ink-soft">Nama produk</span>
                             <input wire:model="fName" class="h-11 rounded-xl border border-line px-3 text-sm" placeholder="mis. Hijab Basic Hitam"></label>
                         <label class="flex flex-col gap-1.5"><span class="text-xs font-semibold text-ink-soft">Kategori</span>
-                            <select wire:model="fCategory" x-on:change="fee = feeMap[$event.target.value] ?? 0" class="h-11 rounded-xl border border-line px-3 text-sm">
+                            <select wire:model="fCategory" class="h-11 rounded-xl border border-line px-3 text-sm">
                                 <option value="">— Tanpa kategori —</option>
                                 @foreach ($this->orderedCats as $n)<option value="{{ $n['cat']->id }}">{{ str_repeat('— ', $n['depth']) }}{{ $n['cat']->name }}</option>@endforeach
                             </select></label>
@@ -182,38 +168,50 @@
                     </div>
 
                     @if ($mode === 'new')
-                        <div class="flex flex-col gap-2 rounded-xl border border-line bg-surface-2 p-3">
+                        <div class="flex flex-col gap-3 rounded-xl border border-line bg-surface-2 p-3">
                             <div class="flex items-center gap-2">
-                                <span class="text-xs font-bold uppercase tracking-wide text-ink-soft">Atribut (opsional)</span>
-                                <button wire:click="addAttr" class="ml-auto text-xs font-semibold text-accent-600 hover:underline">+ Tambah atribut</button>
+                                <span class="text-xs font-bold uppercase tracking-wide text-ink-soft">Varian (opsional)</span>
+                                <button wire:click="addAttr" class="ml-auto text-xs font-semibold text-accent-600 hover:underline">+ Tambah varian</button>
                             </div>
                             @forelse ($attrs as $i => $a)
-                                <div wire:key="attr-{{ $i }}" class="flex items-center gap-2">
-                                    <input wire:model="attrs.{{ $i }}.name" placeholder="Nama (mis. Warna)" class="h-9 w-36 rounded-lg border border-line px-2 text-sm">
-                                    <input wire:model="attrs.{{ $i }}.opts" placeholder="Opsi, pisah koma: Hitam, Navy" class="h-9 flex-1 rounded-lg border border-line px-2 text-sm">
-                                    <button wire:click="removeAttr({{ $i }})" class="text-ink-faint hover:text-red-600">✕</button>
+                                <div wire:key="attr-{{ $i }}" class="flex flex-col gap-2 rounded-lg border border-line bg-surface p-2.5">
+                                    <div class="flex items-center gap-2">
+                                        <input wire:model="attrs.{{ $i }}.name" placeholder="Nama varian (mis. Warna)" class="h-9 flex-1 rounded-lg border border-line px-2 text-sm font-semibold">
+                                        <button wire:click="removeAttr({{ $i }})" class="grid h-8 w-8 flex-none place-items-center rounded-lg text-ink-faint transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/15" aria-label="Hapus varian">✕</button>
+                                    </div>
+                                    <div class="flex flex-col gap-1.5 pl-1">
+                                        <span class="text-[11px] font-semibold text-ink-faint">Opsi (satu per baris):</span>
+                                        @foreach ($a['options'] as $j => $opt)
+                                            <div wire:key="opt-{{ $i }}-{{ $j }}" class="flex items-center gap-2">
+                                                <span class="text-ink-faint">•</span>
+                                                <input wire:model="attrs.{{ $i }}.options.{{ $j }}" wire:keydown.enter="addOpt({{ $i }})" placeholder="mis. Hitam" class="h-8 flex-1 rounded-lg border border-line px-2 text-sm">
+                                                <button wire:click="removeOpt({{ $i }}, {{ $j }})" class="grid h-7 w-7 flex-none place-items-center rounded-lg text-ink-faint transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/15" aria-label="Hapus opsi">✕</button>
+                                            </div>
+                                        @endforeach
+                                        <button wire:click="addOpt({{ $i }})" class="self-start rounded-lg border border-line px-2 py-1 text-xs font-semibold text-accent-600 hover:bg-surface-3">+ tambah opsi</button>
+                                    </div>
                                 </div>
                             @empty
-                                <p class="text-xs text-ink-faint">Tanpa atribut = produk harga tunggal. Tambah atribut untuk banyak varian (mis. warna).</p>
+                                <p class="text-xs text-ink-faint">Tanpa varian = produk harga tunggal. Tambah varian (mis. <b>Warna</b>) lalu isi opsinya (Hitam, Navy…) satu per satu.</p>
                             @endforelse
-                            <button wire:click="generateVariants" class="self-start rounded-lg border border-line px-3 py-1.5 text-xs font-semibold hover:bg-surface">Buat / segarkan varian</button>
+                            @if (count($attrs))
+                                <button wire:click="generateVariants" class="self-start rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold hover:bg-surface-3">Buat / segarkan varian</button>
+                            @endif
                         </div>
 
-                        <p class="text-xs text-ink-faint">Isi <b>Modal</b> &amp; <b>Harga online</b> — offline, laba, &amp; margin dihitung otomatis (fee Shopee: <span class="font-semibold" x-text="(fee*100).toFixed(2).replace(/\.?0+$/,'')+'%'"></span>).</p>
+                        <p class="text-xs text-ink-faint">Isi harga tiap varian: <b>Modal</b>, <b>Offline</b>, &amp; <b>Online</b>.</p>
                         <div class="overflow-x-auto">
-                            <table class="w-full min-w-[640px] text-sm">
+                            <table class="w-full min-w-[520px] text-sm">
                                 <thead><tr class="text-left text-xs uppercase tracking-wide text-ink-soft">
-                                    <th class="py-2 pr-2 font-semibold">Varian</th><th class="px-1 py-2 font-semibold">Modal</th><th class="px-1 py-2 font-semibold">Harga online</th><th class="px-1 py-2 text-right font-semibold">→ Offline</th><th class="px-1 py-2 text-right font-semibold">Laba online</th><th class="px-1 py-2 text-right font-semibold">Margin</th><th class="px-1 py-2 font-semibold">Stok</th>
+                                    <th class="py-2 pr-2 font-semibold">Varian</th><th class="px-1 py-2 font-semibold">Modal</th><th class="px-1 py-2 font-semibold">Harga offline</th><th class="px-1 py-2 font-semibold">Harga online</th><th class="px-1 py-2 font-semibold">Stok</th>
                                 </tr></thead>
                                 <tbody>
                                     @foreach ($rows as $i => $r)
-                                        <tr wire:key="nr-{{ $i }}" x-data="{ modal: {{ (int) ($r['cost'] ?: 0) }}, online: {{ (int) ($r['online'] ?: 0) }} }">
+                                        <tr wire:key="nr-{{ $i }}">
                                             <td class="py-1 pr-2 font-medium">{{ $r['label'] ?: 'Tunggal' }}</td>
-                                            <td class="px-1 py-1"><input wire:model="rows.{{ $i }}.cost" @input="modal = +$event.target.value || 0" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums" placeholder="0"></td>
-                                            <td class="px-1 py-1"><input wire:model="rows.{{ $i }}.online" @input="online = +$event.target.value || 0" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums" placeholder="0"></td>
-                                            <td class="px-1 py-1 text-right tabular-nums text-ink-soft" x-text="fmtRp(gCalc.offline(online, offDisc))"></td>
-                                            <td class="px-1 py-1 text-right tabular-nums" :class="gCalc.labaOnline(modal, online, fee) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600'" x-text="fmtRp(gCalc.labaOnline(modal, online, fee))"></td>
-                                            <td class="px-1 py-1 text-right font-semibold tabular-nums" x-text="gCalc.margin(modal, online, fee) + '%'"></td>
+                                            <td class="px-1 py-1"><input wire:model="rows.{{ $i }}.cost" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums" placeholder="0"></td>
+                                            <td class="px-1 py-1"><input wire:model="rows.{{ $i }}.offline" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums" placeholder="0"></td>
+                                            <td class="px-1 py-1"><input wire:model="rows.{{ $i }}.online" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums" placeholder="0"></td>
                                             <td class="px-1 py-1"><input wire:model="rows.{{ $i }}.stock" inputmode="numeric" class="h-9 w-20 rounded-lg border border-line px-2 text-right text-sm tabular-nums" placeholder="0"></td>
                                         </tr>
                                     @endforeach
@@ -221,21 +219,19 @@
                             </table>
                         </div>
                     @else
-                        <p class="text-xs text-ink-faint">Ubah <b>Modal</b> / <b>Harga online</b> — offline, laba, &amp; margin ikut otomatis (fee Shopee <span class="font-semibold" x-text="(fee*100).toFixed(2).replace(/\.?0+$/,'')+'%'"></span>).</p>
+                        <p class="text-xs text-ink-faint">Ubah harga tiap varian: <b>Modal</b>, <b>Offline</b>, &amp; <b>Online</b>.</p>
                         <div class="overflow-x-auto">
-                            <table class="w-full min-w-[700px] text-sm">
+                            <table class="w-full min-w-[560px] text-sm">
                                 <thead><tr class="text-left text-xs uppercase tracking-wide text-ink-soft">
-                                    <th class="py-2 pr-2 font-semibold">Varian</th><th class="px-1 py-2 font-semibold">Modal</th><th class="px-1 py-2 font-semibold">Harga online</th><th class="px-1 py-2 text-right font-semibold">→ Offline</th><th class="px-1 py-2 text-right font-semibold">Laba online</th><th class="px-1 py-2 text-right font-semibold">Margin</th><th class="px-1 py-2 font-semibold">Stok</th><th class="px-1 py-2 font-semibold">Aktif</th>
+                                    <th class="py-2 pr-2 font-semibold">Varian</th><th class="px-1 py-2 font-semibold">Modal</th><th class="px-1 py-2 font-semibold">Harga offline</th><th class="px-1 py-2 font-semibold">Harga online</th><th class="px-1 py-2 font-semibold">Stok</th><th class="px-1 py-2 font-semibold">Aktif</th>
                                 </tr></thead>
                                 <tbody>
                                     @foreach ($editRows as $i => $r)
-                                        <tr wire:key="er-{{ $r['id'] }}" x-data="{ modal: {{ (int) ($r['cost'] ?: 0) }}, online: {{ (int) ($r['online'] ?: 0) }} }">
+                                        <tr wire:key="er-{{ $r['id'] }}">
                                             <td class="py-1 pr-2 font-medium">{{ $r['label'] ?: 'Tunggal' }}</td>
-                                            <td class="px-1 py-1"><input wire:model="editRows.{{ $i }}.cost" @input="modal = +$event.target.value || 0" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums"></td>
-                                            <td class="px-1 py-1"><input wire:model="editRows.{{ $i }}.online" @input="online = +$event.target.value || 0" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums"></td>
-                                            <td class="px-1 py-1 text-right tabular-nums text-ink-soft" x-text="fmtRp(gCalc.offline(online, offDisc))"></td>
-                                            <td class="px-1 py-1 text-right tabular-nums" :class="gCalc.labaOnline(modal, online, fee) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600'" x-text="fmtRp(gCalc.labaOnline(modal, online, fee))"></td>
-                                            <td class="px-1 py-1 text-right font-semibold tabular-nums" x-text="gCalc.margin(modal, online, fee) + '%'"></td>
+                                            <td class="px-1 py-1"><input wire:model="editRows.{{ $i }}.cost" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums"></td>
+                                            <td class="px-1 py-1"><input wire:model="editRows.{{ $i }}.offline" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums"></td>
+                                            <td class="px-1 py-1"><input wire:model="editRows.{{ $i }}.online" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums"></td>
                                             <td class="px-1 py-1"><input wire:model="editRows.{{ $i }}.stock" inputmode="numeric" class="h-9 w-20 rounded-lg border border-line px-2 text-right text-sm tabular-nums"></td>
                                             <td class="px-1 py-1 text-center"><input type="checkbox" wire:model="editRows.{{ $i }}.active"></td>
                                         </tr>
