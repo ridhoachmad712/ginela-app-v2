@@ -167,6 +167,20 @@
                         </div>
                     </div>
 
+                    {{-- Harga produk (berlaku sama untuk semua varian) --}}
+                    <div class="rounded-xl border border-line bg-surface-2 p-3">
+                        <div class="mb-2 text-xs font-bold uppercase tracking-wide text-ink-soft">Harga produk</div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <label class="flex flex-col gap-1"><span class="text-xs font-semibold text-ink-soft">Modal</span>
+                                <input wire:model="pModal" inputmode="numeric" placeholder="0" class="h-10 rounded-lg border border-line bg-surface px-2 text-right text-sm tabular-nums"></label>
+                            <label class="flex flex-col gap-1"><span class="text-xs font-semibold text-ink-soft">Harga offline</span>
+                                <input wire:model="pOffline" inputmode="numeric" placeholder="0" class="h-10 rounded-lg border border-line bg-surface px-2 text-right text-sm tabular-nums"></label>
+                            <label class="flex flex-col gap-1"><span class="text-xs font-semibold text-ink-soft">Harga online</span>
+                                <input wire:model="pOnline" inputmode="numeric" placeholder="0" class="h-10 rounded-lg border border-line bg-surface px-2 text-right text-sm tabular-nums"></label>
+                        </div>
+                        <p class="mt-1.5 text-xs text-ink-faint">Harga berlaku <b>sama untuk semua varian</b>. Yang beda hanya <b>stok</b> tiap varian.</p>
+                    </div>
+
                     {{-- Varian (tersedia di Tambah & Edit) --}}
                     <div class="flex flex-col gap-3 rounded-xl border border-line bg-surface-2 p-3">
                             <div class="flex items-center gap-2">
@@ -199,42 +213,36 @@
                             @endif
                     </div>
 
+                    <p class="text-xs font-bold uppercase tracking-wide text-ink-soft">Stok per varian</p>
                     @if ($mode === 'new')
-                        <p class="text-xs text-ink-faint">Isi harga tiap varian: <b>Modal</b>, <b>Offline</b>, &amp; <b>Online</b>.</p>
                         <div class="overflow-x-auto">
-                            <table class="w-full min-w-[520px] text-sm">
+                            <table class="w-full text-sm">
                                 <thead><tr class="text-left text-xs uppercase tracking-wide text-ink-soft">
-                                    <th class="py-2 pr-2 font-semibold">Varian</th><th class="px-1 py-2 font-semibold">Modal</th><th class="px-1 py-2 font-semibold">Harga offline</th><th class="px-1 py-2 font-semibold">Harga online</th><th class="px-1 py-2 font-semibold">Stok</th>
+                                    <th class="py-2 pr-2 font-semibold">Varian</th><th class="px-1 py-2 font-semibold">Stok</th>
                                 </tr></thead>
                                 <tbody>
                                     @foreach ($rows as $i => $r)
                                         <tr wire:key="nr-{{ $i }}">
-                                            <td class="py-1 pr-2 font-medium">{{ $r['label'] ?: 'Tunggal' }}</td>
-                                            <td class="px-1 py-1"><input wire:model="rows.{{ $i }}.cost" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums" placeholder="0"></td>
-                                            <td class="px-1 py-1"><input wire:model="rows.{{ $i }}.offline" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums" placeholder="0"></td>
-                                            <td class="px-1 py-1"><input wire:model="rows.{{ $i }}.online" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums" placeholder="0"></td>
-                                            <td class="px-1 py-1"><input wire:model="rows.{{ $i }}.stock" inputmode="numeric" class="h-9 w-20 rounded-lg border border-line px-2 text-right text-sm tabular-nums" placeholder="0"></td>
+                                            <td class="py-1.5 pr-2 font-medium">{{ $r['label'] ?: 'Tunggal' }}</td>
+                                            <td class="px-1 py-1.5"><input wire:model="rows.{{ $i }}.stock" inputmode="numeric" class="h-9 w-28 rounded-lg border border-line px-2 text-right text-sm tabular-nums" placeholder="0"></td>
                                         </tr>
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
                     @else
-                        <p class="text-xs text-ink-faint">Menambah warna? Isi <b>Varian</b> di atas → <b>Buat / segarkan varian</b>, lalu isi Modal/Offline/Online/Stok tiap warna. Varian lama yang sudah ada transaksinya akan dinonaktifkan (tidak dihapus).</p>
+                        <p class="text-xs text-ink-faint">Menambah warna? Isi <b>Varian</b> di atas → <b>Buat / segarkan varian</b>, lalu isi stok tiap warna (harga ikut yang di atas). Varian ber-riwayat dinonaktifkan, bukan dihapus.</p>
                         <div class="overflow-x-auto">
-                            <table class="w-full min-w-[560px] text-sm">
+                            <table class="w-full text-sm">
                                 <thead><tr class="text-left text-xs uppercase tracking-wide text-ink-soft">
-                                    <th class="py-2 pr-2 font-semibold">Varian</th><th class="px-1 py-2 font-semibold">Modal</th><th class="px-1 py-2 font-semibold">Harga offline</th><th class="px-1 py-2 font-semibold">Harga online</th><th class="px-1 py-2 font-semibold">Stok</th><th class="px-1 py-2 font-semibold">Aktif</th>
+                                    <th class="py-2 pr-2 font-semibold">Varian</th><th class="px-1 py-2 font-semibold">Stok</th><th class="px-1 py-2 font-semibold">Aktif</th>
                                 </tr></thead>
                                 <tbody>
                                     @foreach ($editRows as $i => $r)
-                                        <tr wire:key="er-{{ $r['id'] }}">
-                                            <td class="py-1 pr-2 font-medium">{{ $r['label'] ?: 'Tunggal' }}</td>
-                                            <td class="px-1 py-1"><input wire:model="editRows.{{ $i }}.cost" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums"></td>
-                                            <td class="px-1 py-1"><input wire:model="editRows.{{ $i }}.offline" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums"></td>
-                                            <td class="px-1 py-1"><input wire:model="editRows.{{ $i }}.online" inputmode="numeric" class="h-9 w-24 rounded-lg border border-line px-2 text-right text-sm tabular-nums"></td>
-                                            <td class="px-1 py-1"><input wire:model="editRows.{{ $i }}.stock" inputmode="numeric" class="h-9 w-20 rounded-lg border border-line px-2 text-right text-sm tabular-nums"></td>
-                                            <td class="px-1 py-1 text-center"><input type="checkbox" wire:model="editRows.{{ $i }}.active"></td>
+                                        <tr wire:key="er-{{ $r['id'] ?? 'new'.$i }}">
+                                            <td class="py-1.5 pr-2 font-medium">{{ $r['label'] ?: 'Tunggal' }}</td>
+                                            <td class="px-1 py-1.5"><input wire:model="editRows.{{ $i }}.stock" inputmode="numeric" class="h-9 w-28 rounded-lg border border-line px-2 text-right text-sm tabular-nums"></td>
+                                            <td class="px-1 py-1.5 text-center"><input type="checkbox" wire:model="editRows.{{ $i }}.active"></td>
                                         </tr>
                                     @endforeach
                                 </tbody>

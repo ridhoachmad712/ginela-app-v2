@@ -67,6 +67,13 @@ class KelolaProduk extends Component
 
     public string $fEmoji = '';
 
+    // Harga level-produk (berlaku sama untuk semua varian)
+    public string $pModal = '';
+
+    public string $pOffline = '';
+
+    public string $pOnline = '';
+
     /** @var array<int,array{name:string,opts:string}> */
     public array $attrs = [];
 
@@ -425,7 +432,7 @@ class KelolaProduk extends Component
         if (! $this->guardAdmin()) {
             return;
         }
-        $this->reset(['fName', 'fCategory', 'fUnit', 'fEmoji', 'attrs', 'rows', 'editId', 'error', 'photo', 'existingImage']);
+        $this->reset(['fName', 'fCategory', 'fUnit', 'fEmoji', 'pModal', 'pOffline', 'pOnline', 'attrs', 'rows', 'editId', 'error', 'photo', 'existingImage']);
         $this->fUnit = 'pcs';
         $this->fCategory = is_numeric($this->selCat) ? (string) $this->selCat : '';
         $this->rows = [$this->emptyRow([])];
@@ -434,7 +441,7 @@ class KelolaProduk extends Component
 
     private function emptyRow(array $combo): array
     {
-        return ['combo' => $combo, 'label' => implode(' / ', $combo), 'offline' => '', 'online' => '', 'cost' => '', 'stock' => '', 'min' => '5'];
+        return ['combo' => $combo, 'label' => implode(' / ', $combo), 'stock' => '', 'min' => '5'];
     }
 
     public function addAttr(): void
@@ -495,7 +502,7 @@ class KelolaProduk extends Component
             $this->editRows = array_map(function ($combo) use ($old) {
                 $label = implode(' / ', $combo);
 
-                return $old->get($label) ?? ['id' => null, 'label' => $label, 'offline' => '', 'online' => '', 'cost' => '', 'stock' => '', 'min' => '5', 'active' => true];
+                return $old->get($label) ?? ['id' => null, 'label' => $label, 'stock' => '', 'min' => '5', 'active' => true];
             }, $combos);
 
             return;
@@ -520,20 +527,19 @@ class KelolaProduk extends Component
 
             return;
         }
-        foreach ($this->rows as $r) {
-            if ((int) $r['online'] <= 0) {
-                $this->error = 'Harga online tiap varian harus lebih dari 0.';
+        if ((int) $this->pOnline <= 0) {
+            $this->error = 'Harga online wajib diisi (lebih dari 0).';
 
-                return;
-            }
+            return;
         }
         $pa = $this->parsedAttrs();
         if ($this->photo) {
             $this->validate(['photo' => 'image|max:2048']);
         }
         $imagePath = $this->photo ? $this->photo->store('products', 'public') : null;
+        $prices = ['cost' => (int) ($this->pModal ?: 0), 'offline' => (int) ($this->pOffline ?: 0), 'online' => (int) $this->pOnline];
 
-        DB::transaction(function () use ($pa, $imagePath) {
+        DB::transaction(function () use ($pa, $imagePath, $prices) {
             $product = Product::create([
                 'name' => trim($this->fName),
                 'category_id' => $this->fCategory ? (int) $this->fCategory : null,
@@ -551,8 +557,8 @@ class KelolaProduk extends Component
             foreach ($this->rows as $r) {
                 $v = $product->variants()->create([
                     'label' => implode(' / ', $r['combo']),
-                    'offline_price' => (int) ($r['offline'] ?: 0), 'online_price' => (int) $r['online'],
-                    'cost_price' => (int) ($r['cost'] ?: 0), 'stock' => (int) ($r['stock'] ?: 0),
+                    'offline_price' => $prices['offline'], 'online_price' => $prices['online'],
+                    'cost_price' => $prices['cost'], 'stock' => (int) ($r['stock'] ?: 0),
                     'min_stock' => (int) ($r['min'] ?: 5),
                 ]);
                 $ids = [];
@@ -592,11 +598,13 @@ class KelolaProduk extends Component
             'name' => $a->name,
             'options' => $a->options->sortBy('sort_order')->pluck('value')->values()->all() ?: [''],
         ])->values()->all();
+        $first = $p->variants->first();
+        $this->pModal = (string) ($first->cost_price ?? '');
+        $this->pOffline = (string) ($first->offline_price ?? '');
+        $this->pOnline = (string) ($first->online_price ?? '');
         $this->editRows = $p->variants->map(fn ($v) => [
             'id' => $v->id, 'label' => $v->label,
-            'offline' => (string) $v->offline_price, 'online' => (string) $v->online_price,
-            'cost' => (string) $v->cost_price, 'stock' => (string) $v->stock,
-            'min' => (string) $v->min_stock, 'active' => (bool) $v->is_active,
+            'stock' => (string) $v->stock, 'min' => (string) $v->min_stock, 'active' => (bool) $v->is_active,
         ])->all();
         $this->error = null;
         $this->mode = 'edit';
@@ -613,20 +621,19 @@ class KelolaProduk extends Component
 
             return;
         }
-        foreach ($this->editRows as $r) {
-            if ((int) $r['online'] <= 0) {
-                $this->error = 'Harga online tiap varian harus lebih dari 0.';
+        if ((int) $this->pOnline <= 0) {
+            $this->error = 'Harga online wajib diisi (lebih dari 0).';
 
-                return;
-            }
+            return;
         }
         if ($this->photo) {
             $this->validate(['photo' => 'image|max:2048']);
         }
         $newImage = $this->photo ? $this->photo->store('products', 'public') : null;
         $pa = $this->parsedAttrs();
+        $prices = ['cost' => (int) ($this->pModal ?: 0), 'offline' => (int) ($this->pOffline ?: 0), 'online' => (int) $this->pOnline];
 
-        DB::transaction(function () use ($newImage, $pa) {
+        DB::transaction(function () use ($newImage, $pa, $prices) {
             $product = Product::find($this->editId);
             $data = [
                 'name' => trim($this->fName),
@@ -656,8 +663,8 @@ class KelolaProduk extends Component
                 $combo = $label === '' ? [] : explode(' / ', $label);
                 $vals = [
                     'label' => $label,
-                    'offline_price' => (int) ($r['offline'] ?: 0), 'online_price' => (int) $r['online'],
-                    'cost_price' => (int) ($r['cost'] ?: 0), 'stock' => (int) ($r['stock'] ?: 0),
+                    'offline_price' => $prices['offline'], 'online_price' => $prices['online'],
+                    'cost_price' => $prices['cost'], 'stock' => (int) ($r['stock'] ?: 0),
                     'min_stock' => (int) ($r['min'] ?: 5), 'is_active' => (bool) ($r['active'] ?? true),
                 ];
                 $v = ! empty($r['id']) ? ProductVariant::where('id', $r['id'])->where('product_id', $product->id)->first() : null;
