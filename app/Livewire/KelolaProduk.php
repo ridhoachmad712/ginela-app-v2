@@ -44,6 +44,12 @@ class KelolaProduk extends Component
 
     public ?int $catParent = null;
 
+    public string $quickAddName = '';
+
+    public ?int $subAddUnder = null;
+
+    public string $subAddName = '';
+
     public ?int $catDeleting = null;
 
     public string $catAdmin = '0';
@@ -219,7 +225,9 @@ class KelolaProduk extends Component
             return;
         }
         $this->resetCatForm();
-        $this->catParent = is_numeric($this->selCat) ? (int) $this->selCat : null;
+        $this->quickAddName = '';
+        $this->subAddUnder = null;
+        $this->subAddName = '';
         $this->catDeleting = null;
         $this->catModal = true;
     }
@@ -228,7 +236,73 @@ class KelolaProduk extends Component
     {
         $this->catModal = false;
         $this->resetCatForm();
+        $this->quickAddName = '';
+        $this->subAddUnder = null;
+        $this->subAddName = '';
         $this->catDeleting = null;
+    }
+
+    /** Buat kategori baru — nama saja; fee otomatis diwarisi dari induk. */
+    private function createCategory(string $name, ?int $parent): bool
+    {
+        $name = trim($name);
+        if ($name === '') {
+            $this->catError = 'Nama kategori wajib diisi.';
+
+            return false;
+        }
+        $dupe = Category::whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->where('parent_id', $parent)->exists();
+        if ($dupe) {
+            $this->catError = 'Sudah ada "'.$name.'" di tempat yang sama.';
+
+            return false;
+        }
+        Category::create([
+            'name' => $name, 'parent_id' => $parent, 'sort_order' => (int) Category::max('sort_order') + 1,
+            'shopee_admin_rate' => 0, 'shopee_service_rate' => 0,
+        ]);
+        unset($this->orderedCats, $this->catCards, $this->products, $this->crumbs);
+
+        return true;
+    }
+
+    public function addTop(): void
+    {
+        if (! $this->guardAdmin()) {
+            return;
+        }
+        $this->catError = null;
+        if ($this->createCategory($this->quickAddName, null)) {
+            $this->quickAddName = '';
+            $this->dispatch('toast', message: 'Kategori ditambahkan', type: 'success');
+        }
+    }
+
+    public function startSub(int $id): void
+    {
+        $this->catEditId = null;
+        $this->subAddUnder = $id;
+        $this->subAddName = '';
+        $this->catError = null;
+    }
+
+    public function cancelSub(): void
+    {
+        $this->subAddUnder = null;
+        $this->subAddName = '';
+    }
+
+    public function saveSub(): void
+    {
+        if (! $this->guardAdmin() || ! $this->subAddUnder) {
+            return;
+        }
+        $this->catError = null;
+        if ($this->createCategory($this->subAddName, $this->subAddUnder)) {
+            $this->subAddUnder = null;
+            $this->subAddName = '';
+            $this->dispatch('toast', message: 'Sub-kategori ditambahkan', type: 'success');
+        }
     }
 
     public function resetCatForm(): void
@@ -260,12 +334,13 @@ class KelolaProduk extends Component
         $this->catParent = $c->parent_id;
         $this->catAdmin = $this->fmtPct($c->shopee_admin_rate);
         $this->catService = $this->fmtPct($c->shopee_service_rate);
+        $this->subAddUnder = null;
         $this->catError = null;
     }
 
     public function saveCat(): void
     {
-        if (! $this->guardAdmin()) {
+        if (! $this->guardAdmin() || ! $this->catEditId) {
             return;
         }
         $name = trim($this->catName);
@@ -280,39 +355,28 @@ class KelolaProduk extends Component
 
             return;
         }
-        // cegah nama sama dalam satu induk
         $dupe = Category::whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
-            ->where('parent_id', $parent)
-            ->when($this->catEditId, fn ($q) => $q->where('id', '!=', $this->catEditId))
-            ->exists();
+            ->where('parent_id', $parent)->where('id', '!=', $this->catEditId)->exists();
         if ($dupe) {
-            $this->catError = 'Sudah ada kategori "'.$name.'" di induk yang sama.';
+            $this->catError = 'Sudah ada "'.$name.'" di tempat yang sama.';
 
             return;
         }
         $pct = fn ($v) => is_numeric($v) && (float) $v >= 0 && (float) $v <= 100;
         if (! $pct($this->catAdmin) || ! $pct($this->catService)) {
-            $this->catError = 'Fee admin & layanan harus 0–100%.';
+            $this->catError = 'Fee harus 0–100%.';
 
             return;
         }
-        $data = [
+        Category::where('id', $this->catEditId)->update([
             'name' => $name,
             'parent_id' => $parent,
             'shopee_admin_rate' => (float) $this->catAdmin / 100,
             'shopee_service_rate' => (float) $this->catService / 100,
-        ];
-
-        if ($this->catEditId) {
-            Category::where('id', $this->catEditId)->update($data);
-            $msg = 'Kategori diperbarui';
-        } else {
-            Category::create($data + ['sort_order' => (int) Category::max('sort_order') + 1]);
-            $msg = 'Kategori ditambahkan';
-        }
+        ]);
         $this->resetCatForm();
         unset($this->orderedCats, $this->catCards, $this->products, $this->crumbs);
-        $this->dispatch('toast', message: $msg, type: 'success');
+        $this->dispatch('toast', message: 'Kategori diperbarui', type: 'success');
     }
 
     public function askDeleteCat(int $id): void

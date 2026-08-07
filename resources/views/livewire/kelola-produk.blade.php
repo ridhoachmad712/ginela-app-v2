@@ -282,63 +282,71 @@
                     </button>
                 </div>
 
-                {{-- Form tambah / edit --}}
-                <div class="flex flex-col gap-2 border-b border-line px-5 py-4">
-                    <div class="flex gap-2">
-                        <label class="flex flex-1 flex-col gap-1">
-                            <span class="text-xs font-semibold text-ink-soft">{{ $catEditId ? 'Edit nama' : 'Nama kategori' }}</span>
-                            <input wire:model="catName" wire:keydown.enter="saveCat" placeholder="mis. Basic"
-                                   class="h-11 rounded-xl border border-line bg-surface px-3 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-100">
-                        </label>
-                        <label class="flex flex-1 flex-col gap-1">
-                            <span class="text-xs font-semibold text-ink-soft">Induk</span>
-                            <select wire:model="catParent" class="h-11 rounded-xl border border-line bg-surface px-2 text-sm">
-                                <option value="">— Kategori utama —</option>
-                                @foreach ($this->orderedCats as $n)
-                                    @if ($n['cat']->id !== $catEditId)
-                                        <option value="{{ $n['cat']->id }}">{{ str_repeat('— ', $n['depth']) }}{{ $n['cat']->name }}</option>
-                                    @endif
-                                @endforeach
-                            </select>
-                        </label>
-                    </div>
-                    <div class="flex items-end gap-2">
-                        <label class="flex flex-1 flex-col gap-1">
-                            <span class="text-xs font-semibold text-ink-soft">Fee admin (%)</span>
-                            <input wire:model="catAdmin" inputmode="decimal" placeholder="0" class="h-11 rounded-xl border border-line bg-surface px-3 text-sm">
-                        </label>
-                        <label class="flex flex-1 flex-col gap-1">
-                            <span class="text-xs font-semibold text-ink-soft">Fee layanan (%)</span>
-                            <input wire:model="catService" inputmode="decimal" placeholder="0" class="h-11 rounded-xl border border-line bg-surface px-3 text-sm">
-                        </label>
-                        <button wire:click="saveCat" class="h-11 flex-none rounded-xl bg-accent-600 px-4 text-sm font-bold text-white transition hover:bg-accent-700">{{ $catEditId ? 'Simpan' : 'Tambah' }}</button>
-                        @if ($catEditId)<button wire:click="resetCatForm" class="h-11 flex-none rounded-xl border border-line px-3 text-sm font-semibold text-ink-soft hover:bg-surface-3">Batal</button>@endif
-                    </div>
-                    @if ($catError)<p class="text-xs font-medium text-red-600">{{ $catError }}</p>@endif
-                    <p class="text-xs text-ink-faint">Kosongkan fee → diwarisi dari induk. Menambah saat berada di dalam kategori otomatis jadi sub-kategori.</p>
+                {{-- Tambah kategori utama (cukup nama) --}}
+                <div class="flex items-center gap-2 border-b border-line px-5 py-3">
+                    <input wire:model="quickAddName" wire:keydown.enter="addTop" placeholder="Tambah kategori utama…"
+                           class="h-11 flex-1 rounded-xl border border-line bg-surface px-3 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-100">
+                    <button wire:click="addTop" class="h-11 flex-none rounded-xl bg-accent-600 px-4 text-sm font-bold text-white transition hover:bg-accent-700">+ Tambah</button>
                 </div>
+                @if ($catError && ! $catEditId && ! $subAddUnder)<p class="px-5 pt-2 text-xs font-medium text-red-600">{{ $catError }}</p>@endif
 
                 {{-- Pohon kategori --}}
                 <div class="min-h-0 flex-1 overflow-y-auto px-3 py-2">
                     @forelse ($this->orderedCats as $n)
                         @php $c = $n['cat']; $inh = $c->feeIsInherited(); $eff = $c->shopeeFeeRate(); @endphp
-                        <div wire:key="catm-{{ $c->id }}" class="flex items-center gap-2 rounded-xl px-2 py-2 transition hover:bg-surface-2" style="padding-left: {{ 0.5 + $n['depth'] * 1.25 }}rem">
-                            <span class="text-ink-faint">{{ $n['depth'] > 0 ? '└' : '🏷️' }}</span>
-                            <div class="min-w-0 flex-1">
-                                <div class="truncate text-sm font-semibold">{{ $c->name }}</div>
-                                <div class="text-[11px] text-ink-faint">{{ $c->products_count }} produk @if ($eff > 0)· fee {{ rtrim(rtrim(number_format($eff * 100, 2), '0'), '.') }}%{{ $inh ? ' (warisan)' : '' }}@endif</div>
-                            </div>
-                            @if ($catDeleting === $c->id)
-                                <span class="text-xs font-medium text-ink-soft">Hapus?</span>
-                                <button wire:click="deleteCat" class="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white">Ya</button>
-                                <button wire:click="cancelDeleteCat" class="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-soft">Batal</button>
+                        <div wire:key="catm-{{ $c->id }}">
+                            @if ($catEditId === $c->id)
+                                {{-- Edit inline --}}
+                                <div class="my-1 flex flex-col gap-2 rounded-xl border-2 border-accent-500 bg-surface-2 p-3" style="margin-left: {{ $n['depth'] * 1 }}rem">
+                                    <input wire:model="catName" wire:keydown.enter="saveCat" placeholder="Nama kategori" class="h-10 rounded-lg border border-line bg-surface px-3 text-sm">
+                                    <label class="flex items-center gap-2 text-xs text-ink-soft">Induk
+                                        <select wire:model="catParent" class="h-9 flex-1 rounded-lg border border-line bg-surface px-2 text-xs">
+                                            <option value="">— Kategori utama —</option>
+                                            @foreach ($this->orderedCats as $m)
+                                                <option value="{{ $m['cat']->id }}" @disabled($m['cat']->id === $c->id)>{{ str_repeat('— ', $m['depth']).$m['cat']->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </label>
+                                    <details><summary class="cursor-pointer text-xs text-ink-soft">Fee Shopee (opsional — kosong = ikut induk)</summary>
+                                        <div class="mt-1 flex gap-2">
+                                            <input wire:model="catAdmin" inputmode="decimal" placeholder="admin %" class="h-9 flex-1 rounded-lg border border-line bg-surface px-2 text-xs">
+                                            <input wire:model="catService" inputmode="decimal" placeholder="layanan %" class="h-9 flex-1 rounded-lg border border-line bg-surface px-2 text-xs">
+                                        </div>
+                                    </details>
+                                    @if ($catError)<p class="text-xs font-medium text-red-600">{{ $catError }}</p>@endif
+                                    <div class="flex gap-2">
+                                        <button wire:click="saveCat" class="h-9 flex-1 rounded-lg bg-accent-600 text-xs font-bold text-white">Simpan</button>
+                                        <button wire:click="resetCatForm" class="h-9 rounded-lg border border-line px-3 text-xs font-semibold text-ink-soft">Batal</button>
+                                    </div>
+                                </div>
                             @else
-                                <button wire:click="editCat({{ $c->id }})" class="grid h-8 w-8 flex-none place-items-center rounded-lg text-ink-faint transition hover:bg-surface-3 hover:text-accent-600" aria-label="Edit">
-                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>
-                                </button>
-                                <button wire:click="askDeleteCat({{ $c->id }})" class="grid h-8 w-8 flex-none place-items-center rounded-lg text-ink-faint transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/15" aria-label="Hapus">
-                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-                                </button>
+                                <div class="flex items-center gap-1.5 rounded-xl px-2 py-2 transition hover:bg-surface-2" style="padding-left: {{ 0.5 + $n['depth'] * 1.25 }}rem">
+                                    <span class="text-ink-faint">{{ $n['depth'] > 0 ? '└' : '🏷️' }}</span>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="truncate text-sm font-semibold">{{ $c->name }}</div>
+                                        <div class="text-[11px] text-ink-faint">{{ $c->products_count }} produk @if ($eff > 0)· fee {{ rtrim(rtrim(number_format($eff * 100, 2), '0'), '.') }}%{{ $inh ? ' (warisan)' : '' }}@endif</div>
+                                    </div>
+                                    @if ($catDeleting === $c->id)
+                                        <span class="text-xs font-medium text-ink-soft">Hapus?</span>
+                                        <button wire:click="deleteCat" class="rounded-lg bg-red-600 px-2.5 py-1 text-xs font-bold text-white">Ya</button>
+                                        <button wire:click="cancelDeleteCat" class="rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-ink-soft">Batal</button>
+                                    @else
+                                        <button wire:click="startSub({{ $c->id }})" class="rounded-lg border border-line px-2 py-1 text-[11px] font-semibold text-ink-soft transition hover:bg-surface-3 hover:text-accent-600">+ Sub</button>
+                                        <button wire:click="editCat({{ $c->id }})" class="grid h-7 w-7 flex-none place-items-center rounded-lg text-ink-faint transition hover:bg-surface-3 hover:text-accent-600" aria-label="Edit">
+                                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>
+                                        </button>
+                                        <button wire:click="askDeleteCat({{ $c->id }})" class="grid h-7 w-7 flex-none place-items-center rounded-lg text-ink-faint transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/15" aria-label="Hapus">
+                                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                                        </button>
+                                    @endif
+                                </div>
+                                @if ($subAddUnder === $c->id)
+                                    <div class="flex items-center gap-2 py-1" style="padding-left: {{ 1.75 + $n['depth'] * 1.25 }}rem">
+                                        <input wire:model="subAddName" wire:keydown.enter="saveSub" placeholder="Nama sub-kategori di {{ $c->name }}…" class="h-9 flex-1 rounded-lg border-2 border-accent-500 bg-surface px-2 text-sm">
+                                        <button wire:click="saveSub" class="h-9 rounded-lg bg-accent-600 px-3 text-xs font-bold text-white">Simpan</button>
+                                        <button wire:click="cancelSub" class="h-9 rounded-lg border border-line px-2 text-xs text-ink-soft">✕</button>
+                                    </div>
+                                @endif
                             @endif
                         </div>
                     @empty
@@ -347,7 +355,7 @@
                 </div>
 
                 <div class="border-t border-line px-5 py-3">
-                    <p class="text-xs text-ink-faint">Hapus kategori → produk & sub-kategorinya jadi "tanpa induk" (tidak ikut terhapus).</p>
+                    <p class="text-xs text-ink-faint"><b>+ Sub</b> tambah sub-kategori di dalamnya · <b>✎</b> ubah nama/induk/fee · hapus → produk & sub jadi tanpa induk.</p>
                 </div>
             </div>
         </div>
