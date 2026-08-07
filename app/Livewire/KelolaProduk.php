@@ -2,9 +2,10 @@
 
 namespace App\Livewire;
 
-use App\Models\AttributeOption;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\StoreSetting;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -22,7 +23,7 @@ class KelolaProduk extends Component
 
     public ?string $existingImage = null;
 
-    public ?string $selCat = null; // null = tampilkan grid kategori; id | 'all' | 'none'
+    public ?string $selCat = null; // null = akar; id kategori | 'all' | 'none'
 
     public string $selCatName = '';
 
@@ -41,6 +42,8 @@ class KelolaProduk extends Component
 
     public ?int $catEditId = null;
 
+    public ?int $catParent = null;
+
     public ?int $catDeleting = null;
 
     public string $catAdmin = '0';
@@ -49,7 +52,7 @@ class KelolaProduk extends Component
 
     public ?string $catError = null;
 
-    // Form info
+    // Form produk
     public string $fName = '';
 
     public string $fCategory = '';
@@ -61,10 +64,8 @@ class KelolaProduk extends Component
     /** @var array<int,array{name:string,opts:string}> */
     public array $attrs = [];
 
-    /** Baris varian (create). */
     public array $rows = [];
 
-    /** Baris varian (edit) — dengan id. */
     public array $editRows = [];
 
     public bool $isAdmin = false;
@@ -80,7 +81,7 @@ class KelolaProduk extends Component
     #[Computed]
     public function stats(): array
     {
-        $variants = \App\Models\ProductVariant::whereHas('product', fn ($q) => $q->where('is_active', true))
+        $variants = ProductVariant::whereHas('product', fn ($q) => $q->where('is_active', true))
             ->get(['stock', 'cost_price', 'min_stock']);
 
         return [
@@ -88,6 +89,98 @@ class KelolaProduk extends Component
             'invValue' => (int) $variants->sum(fn ($v) => $v->stock * $v->cost_price),
             'lowStock' => $variants->filter(fn ($v) => $v->stock <= $v->min_stock)->count(),
         ];
+    }
+
+    // ---------- Navigasi pohon kategori ----------
+    #[Computed]
+    public function currentCat(): ?Category
+    {
+        return is_numeric($this->selCat) ? Category::find((int) $this->selCat) : null;
+    }
+
+    #[Computed]
+    public function crumbs(): array
+    {
+        $c = $this->currentCat;
+        if (! $c) {
+            return [];
+        }
+
+        return [...$c->ancestors(), $c];
+    }
+
+    /** id kategori -> jumlah produk aktif di kategori itu + seluruh turunannya. */
+    private function descendantCounts(): array
+    {
+        $cats = Category::get(['id', 'parent_id']);
+        $direct = Product::where('is_active', true)->selectRaw('category_id, count(*) c')->groupBy('category_id')->pluck('c', 'category_id');
+        $childrenOf = [];
+        foreach ($cats as $c) {
+            $childrenOf[$c->parent_id][] = $c->id;
+        }
+        $calc = function ($id) use (&$calc, &$childrenOf, $direct) {
+            $sum = (int) ($direct[$id] ?? 0);
+            foreach ($childrenOf[$id] ?? [] as $ch) {
+                $sum += $calc($ch);
+            }
+
+            return $sum;
+        };
+        $out = [];
+        foreach ($cats as $c) {
+            $out[$c->id] = $calc($c->id);
+        }
+
+        return $out;
+    }
+
+    #[Computed]
+    public function catCards(): array
+    {
+        if ($this->selCat === 'all' || $this->selCat === 'none') {
+            return [];
+        }
+        $counts = $this->descendantCounts();
+        $parentId = is_numeric($this->selCat) ? (int) $this->selCat : null;
+        $hasKids = Category::whereNotNull('parent_id')->pluck('parent_id')->countBy()->all();
+
+        $cards = [];
+        if ($this->selCat === null) {
+            $cards[] = ['id' => 'all', 'name' => 'Semua Produk', 'count' => Product::where('is_active', true)->count(), 'emoji' => '📦', 'kids' => 0];
+        }
+        foreach (Category::where('parent_id', $parentId)->orderBy('sort_order')->orderBy('name')->get() as $c) {
+            $cards[] = ['id' => (string) $c->id, 'name' => $c->name, 'count' => $counts[$c->id] ?? 0, 'emoji' => '🏷️', 'kids' => (int) ($hasKids[$c->id] ?? 0)];
+        }
+        if ($this->selCat === null) {
+            $none = Product::where('is_active', true)->whereNull('category_id')->count();
+            if ($none > 0) {
+                $cards[] = ['id' => 'none', 'name' => 'Tanpa Kategori', 'count' => $none, 'emoji' => '❔', 'kids' => 0];
+            }
+        }
+
+        return $cards;
+    }
+
+    /** Semua kategori urut pohon (induk sebelum anak) + kedalaman, untuk dropdown & modal. */
+    #[Computed]
+    public function orderedCats(): array
+    {
+        $all = Category::withCount(['products' => fn ($q) => $q->where('is_active', true)])
+            ->orderBy('sort_order')->orderBy('name')->get();
+        $childrenOf = [];
+        foreach ($all as $c) {
+            $childrenOf[$c->parent_id][] = $c;
+        }
+        $out = [];
+        $walk = function ($pid, $depth) use (&$walk, &$childrenOf, &$out) {
+            foreach ($childrenOf[$pid] ?? [] as $c) {
+                $out[] = ['cat' => $c, 'depth' => $depth];
+                $walk($c->id, $depth + 1);
+            }
+        };
+        $walk(null, 0);
+
+        return $out;
     }
 
     #[Computed]
@@ -98,35 +191,9 @@ class KelolaProduk extends Component
         return Product::with(['category', 'attributes.options', 'variants'])
             ->where('is_active', true)
             ->when($this->selCat === 'none', fn ($qq) => $qq->whereNull('category_id'))
-            ->when($this->selCat !== null && ! in_array($this->selCat, ['all', 'none'], true),
-                fn ($qq) => $qq->where('category_id', (int) $this->selCat))
+            ->when(is_numeric($this->selCat), fn ($qq) => $qq->where('category_id', (int) $this->selCat))
             ->when($s !== '', fn ($qq) => $qq->whereRaw('LOWER(name) like ?', ["%{$s}%"]))
             ->orderBy('name')->get();
-    }
-
-    #[Computed]
-    public function categories()
-    {
-        return Category::withCount(['products' => fn ($q) => $q->where('is_active', true)])
-            ->orderBy('sort_order')->get();
-    }
-
-    #[Computed]
-    public function catCards(): array
-    {
-        $counts = Product::where('is_active', true)
-            ->selectRaw('category_id, count(*) as c')->groupBy('category_id')->pluck('c', 'category_id');
-        $total = (int) $counts->sum();
-        $cards = [['id' => 'all', 'name' => 'Semua Produk', 'count' => $total, 'emoji' => '📦']];
-        foreach ($this->categories as $c) {
-            $cards[] = ['id' => (string) $c->id, 'name' => $c->name, 'count' => (int) ($counts[$c->id] ?? 0), 'emoji' => '🏷️'];
-        }
-        $none = (int) ($counts[null] ?? $counts[''] ?? 0);
-        if ($none > 0) {
-            $cards[] = ['id' => 'none', 'name' => 'Tanpa Kategori', 'count' => $none, 'emoji' => '❔'];
-        }
-
-        return $cards;
     }
 
     public function openCat(string $val, string $name): void
@@ -134,13 +201,15 @@ class KelolaProduk extends Component
         $this->selCat = $val;
         $this->selCatName = $name;
         $this->q = '';
-        unset($this->products);
+        unset($this->products, $this->catCards, $this->crumbs, $this->currentCat);
     }
 
-    public function backCats(): void
+    public function goRoot(): void
     {
         $this->selCat = null;
+        $this->selCatName = '';
         $this->q = '';
+        unset($this->products, $this->catCards, $this->crumbs, $this->currentCat);
     }
 
     // ---------- Kelola Kategori ----------
@@ -150,6 +219,7 @@ class KelolaProduk extends Component
             return;
         }
         $this->resetCatForm();
+        $this->catParent = is_numeric($this->selCat) ? (int) $this->selCat : null;
         $this->catDeleting = null;
         $this->catModal = true;
     }
@@ -165,6 +235,7 @@ class KelolaProduk extends Component
     {
         $this->catName = '';
         $this->catEditId = null;
+        $this->catParent = null;
         $this->catAdmin = '0';
         $this->catService = '0';
         $this->catError = null;
@@ -186,6 +257,7 @@ class KelolaProduk extends Component
         }
         $this->catEditId = $id;
         $this->catName = $c->name;
+        $this->catParent = $c->parent_id;
         $this->catAdmin = $this->fmtPct($c->shopee_admin_rate);
         $this->catService = $this->fmtPct($c->shopee_service_rate);
         $this->catError = null;
@@ -202,11 +274,19 @@ class KelolaProduk extends Component
 
             return;
         }
+        $parent = $this->catParent ?: null;
+        if ($parent === $this->catEditId) {
+            $this->catError = 'Kategori tidak bisa jadi induk dirinya sendiri.';
+
+            return;
+        }
+        // cegah nama sama dalam satu induk
         $dupe = Category::whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
+            ->where('parent_id', $parent)
             ->when($this->catEditId, fn ($q) => $q->where('id', '!=', $this->catEditId))
             ->exists();
         if ($dupe) {
-            $this->catError = 'Kategori "'.$name.'" sudah ada.';
+            $this->catError = 'Sudah ada kategori "'.$name.'" di induk yang sama.';
 
             return;
         }
@@ -218,6 +298,7 @@ class KelolaProduk extends Component
         }
         $data = [
             'name' => $name,
+            'parent_id' => $parent,
             'shopee_admin_rate' => (float) $this->catAdmin / 100,
             'shopee_service_rate' => (float) $this->catService / 100,
         ];
@@ -230,7 +311,7 @@ class KelolaProduk extends Component
             $msg = 'Kategori ditambahkan';
         }
         $this->resetCatForm();
-        unset($this->categories, $this->catCards, $this->products);
+        unset($this->orderedCats, $this->catCards, $this->products, $this->crumbs);
         $this->dispatch('toast', message: $msg, type: 'success');
     }
 
@@ -251,6 +332,7 @@ class KelolaProduk extends Component
             return;
         }
         DB::transaction(function () {
+            // produk & sub-kategori jadi tanpa induk (nullOnDelete menangani sub)
             Product::where('category_id', $this->catDeleting)->update(['category_id' => null]);
             Category::where('id', $this->catDeleting)->delete();
         });
@@ -258,7 +340,7 @@ class KelolaProduk extends Component
             $this->resetCatForm();
         }
         $this->catDeleting = null;
-        unset($this->categories, $this->catCards, $this->products);
+        unset($this->orderedCats, $this->catCards, $this->products, $this->crumbs);
         $this->dispatch('toast', message: 'Kategori dihapus', type: 'info');
     }
 
@@ -281,6 +363,7 @@ class KelolaProduk extends Component
         }
         $this->reset(['fName', 'fCategory', 'fUnit', 'fEmoji', 'attrs', 'rows', 'editId', 'error', 'photo', 'existingImage']);
         $this->fUnit = 'pcs';
+        $this->fCategory = is_numeric($this->selCat) ? (string) $this->selCat : '';
         $this->rows = [$this->emptyRow([])];
         $this->mode = 'new';
     }
@@ -359,7 +442,7 @@ class KelolaProduk extends Component
             $this->validate(['photo' => 'image|max:2048']);
         }
         $imagePath = $this->photo ? $this->photo->store('products', 'public') : null;
-        $offDisc = (float) \App\Models\StoreSetting::current()->offline_discount_rate;
+        $offDisc = (float) StoreSetting::current()->offline_discount_rate;
 
         DB::transaction(function () use ($pa, $imagePath, $offDisc) {
             $product = Product::create([
@@ -449,7 +532,7 @@ class KelolaProduk extends Component
             $this->validate(['photo' => 'image|max:2048']);
         }
         $newImage = $this->photo ? $this->photo->store('products', 'public') : null;
-        $offDisc = (float) \App\Models\StoreSetting::current()->offline_discount_rate;
+        $offDisc = (float) StoreSetting::current()->offline_discount_rate;
 
         DB::transaction(function () use ($newImage, $offDisc) {
             $data = [
@@ -464,7 +547,7 @@ class KelolaProduk extends Component
             Product::where('id', $this->editId)->update($data);
             foreach ($this->editRows as $r) {
                 $online = (int) $r['online'];
-                \App\Models\ProductVariant::where('id', $r['id'])->update([
+                ProductVariant::where('id', $r['id'])->update([
                     'offline_price' => (int) round($online * (1 - $offDisc)), 'online_price' => $online,
                     'cost_price' => (int) ($r['cost'] ?: 0), 'stock' => (int) ($r['stock'] ?: 0),
                     'min_stock' => (int) ($r['min'] ?: 5), 'is_active' => (bool) $r['active'],
@@ -482,7 +565,7 @@ class KelolaProduk extends Component
         }
         Product::where('id', $this->deletingId)->update(['is_active' => false]);
         $this->deletingId = null;
-        unset($this->products);
+        unset($this->products, $this->catCards);
         $this->dispatch('toast', message: 'Produk dinonaktifkan', type: 'info');
     }
 
@@ -490,13 +573,13 @@ class KelolaProduk extends Component
     {
         $this->mode = null;
         $this->editId = null;
-        unset($this->products);
+        unset($this->products, $this->catCards);
     }
 
     public function render()
     {
-        $feeMap = $this->categories->mapWithKeys(fn ($c) => [$c->id => round($c->shopeeFeeRate(), 4)])->all();
-        $offlineDisc = (float) \App\Models\StoreSetting::current()->offline_discount_rate;
+        $feeMap = collect($this->orderedCats)->mapWithKeys(fn ($n) => [$n['cat']->id => round($n['cat']->shopeeFeeRate(), 4)])->all();
+        $offlineDisc = (float) StoreSetting::current()->offline_discount_rate;
 
         return view('livewire.kelola-produk', compact('feeMap', 'offlineDisc'));
     }

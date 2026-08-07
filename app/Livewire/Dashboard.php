@@ -33,9 +33,24 @@ class Dashboard extends Component
     #[Computed]
     public function categoryDist()
     {
-        return Category::withCount(['products' => fn ($q) => $q->where('is_active', true)])
-            ->orderByDesc('products_count')->get()
-            ->map(fn ($c) => ['name' => $c->name, 'count' => (int) $c->products_count]);
+        $cats = Category::get(['id', 'parent_id', 'name']);
+        $direct = Product::where('is_active', true)->selectRaw('category_id, count(*) c')->groupBy('category_id')->pluck('c', 'category_id');
+        $childrenOf = [];
+        foreach ($cats as $c) {
+            $childrenOf[$c->parent_id][] = $c->id;
+        }
+        $calc = function ($id) use (&$calc, &$childrenOf, $direct) {
+            $s = (int) ($direct[$id] ?? 0);
+            foreach ($childrenOf[$id] ?? [] as $ch) {
+                $s += $calc($ch);
+            }
+
+            return $s;
+        };
+
+        return $cats->whereNull('parent_id')
+            ->map(fn ($c) => ['name' => $c->name, 'count' => $calc($c->id)])
+            ->sortByDesc('count')->values();
     }
 
     #[Computed]
