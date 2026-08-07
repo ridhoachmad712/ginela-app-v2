@@ -489,6 +489,18 @@ class KelolaProduk extends Component
             }
             $combos = $next;
         }
+
+        if ($this->mode === 'edit') {
+            $old = collect($this->editRows)->keyBy('label');
+            $this->editRows = array_map(function ($combo) use ($old) {
+                $label = implode(' / ', $combo);
+
+                return $old->get($label) ?? ['id' => null, 'label' => $label, 'offline' => '', 'online' => '', 'cost' => '', 'stock' => '', 'min' => '5', 'active' => true];
+            }, $combos);
+
+            return;
+        }
+
         $old = collect($this->rows)->keyBy('label');
         $this->rows = array_map(function ($combo) use ($old) {
             $label = implode(' / ', $combo);
@@ -565,7 +577,7 @@ class KelolaProduk extends Component
         if (! $this->guardAdmin()) {
             return;
         }
-        $p = Product::with('variants')->find($id);
+        $p = Product::with(['attributes.options', 'variants'])->find($id);
         if (! $p) {
             return;
         }
@@ -576,6 +588,10 @@ class KelolaProduk extends Component
         $this->fEmoji = $p->emoji ?? '';
         $this->existingImage = $p->image_path;
         $this->photo = null;
+        $this->attrs = $p->attributes->sortBy('sort_order')->map(fn ($a) => [
+            'name' => $a->name,
+            'options' => $a->options->sortBy('sort_order')->pluck('value')->values()->all() ?: [''],
+        ])->values()->all();
         $this->editRows = $p->variants->map(fn ($v) => [
             'id' => $v->id, 'label' => $v->label,
             'offline' => (string) $v->offline_price, 'online' => (string) $v->online_price,
@@ -608,8 +624,10 @@ class KelolaProduk extends Component
             $this->validate(['photo' => 'image|max:2048']);
         }
         $newImage = $this->photo ? $this->photo->store('products', 'public') : null;
+        $pa = $this->parsedAttrs();
 
-        DB::transaction(function () use ($newImage) {
+        DB::transaction(function () use ($newImage, $pa) {
+            $product = Product::find($this->editId);
             $data = [
                 'name' => trim($this->fName),
                 'category_id' => $this->fCategory ? (int) $this->fCategory : null,
@@ -619,13 +637,55 @@ class KelolaProduk extends Component
             if ($newImage) {
                 $data['image_path'] = $newImage;
             }
-            Product::where('id', $this->editId)->update($data);
+            $product->update($data);
+
+            // Susun ulang atribut + opsi (cascade menghapus variant_options lama)
+            $product->attributes()->delete();
+            $optId = [];
+            foreach ($pa as $ai => $a) {
+                $attr = $product->attributes()->create(['name' => $a['name'], 'sort_order' => $ai]);
+                foreach ($a['options'] as $oi => $val) {
+                    $optId[$ai][$val] = $attr->options()->create(['value' => $val, 'sort_order' => $oi])->id;
+                }
+            }
+
+            // Rekonsiliasi varian dari editRows
+            $keep = [];
             foreach ($this->editRows as $r) {
-                ProductVariant::where('id', $r['id'])->update([
+                $label = (string) ($r['label'] ?? '');
+                $combo = $label === '' ? [] : explode(' / ', $label);
+                $vals = [
+                    'label' => $label,
                     'offline_price' => (int) ($r['offline'] ?: 0), 'online_price' => (int) $r['online'],
                     'cost_price' => (int) ($r['cost'] ?: 0), 'stock' => (int) ($r['stock'] ?: 0),
-                    'min_stock' => (int) ($r['min'] ?: 5), 'is_active' => (bool) $r['active'],
-                ]);
+                    'min_stock' => (int) ($r['min'] ?: 5), 'is_active' => (bool) ($r['active'] ?? true),
+                ];
+                $v = ! empty($r['id']) ? ProductVariant::where('id', $r['id'])->where('product_id', $product->id)->first() : null;
+                if ($v) {
+                    $v->update($vals);
+                } else {
+                    $v = $product->variants()->create($vals);
+                }
+                $keep[] = $v->id;
+
+                $ids = [];
+                foreach ($combo as $ci => $val) {
+                    if (isset($optId[$ci][$val])) {
+                        $ids[] = $optId[$ci][$val];
+                    }
+                }
+                $ids ? $v->options()->sync($ids) : $v->options()->detach();
+            }
+
+            // Varian yang tak lagi dipakai: nonaktifkan bila ada riwayat, hapus bila belum
+            foreach ($product->variants()->whereNotIn('id', $keep ?: [0])->get() as $old) {
+                $hasHistory = DB::table('stock_movements')->where('variant_id', $old->id)->exists()
+                    || DB::table('transaction_items')->where('variant_id', $old->id)->exists();
+                if ($hasHistory) {
+                    $old->update(['is_active' => false]);
+                } else {
+                    $old->delete();
+                }
             }
         });
         $this->close();

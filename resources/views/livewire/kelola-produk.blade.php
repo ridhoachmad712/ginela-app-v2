@@ -167,8 +167,8 @@
                         </div>
                     </div>
 
-                    @if ($mode === 'new')
-                        <div class="flex flex-col gap-3 rounded-xl border border-line bg-surface-2 p-3">
+                    {{-- Varian (tersedia di Tambah & Edit) --}}
+                    <div class="flex flex-col gap-3 rounded-xl border border-line bg-surface-2 p-3">
                             <div class="flex items-center gap-2">
                                 <span class="text-xs font-bold uppercase tracking-wide text-ink-soft">Varian (opsional)</span>
                                 <button wire:click="addAttr" class="ml-auto text-xs font-semibold text-accent-600 hover:underline">+ Tambah varian</button>
@@ -197,8 +197,9 @@
                             @if (count($attrs))
                                 <button wire:click="generateVariants" class="self-start rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold hover:bg-surface-3">Buat / segarkan varian</button>
                             @endif
-                        </div>
+                    </div>
 
+                    @if ($mode === 'new')
                         <p class="text-xs text-ink-faint">Isi harga tiap varian: <b>Modal</b>, <b>Offline</b>, &amp; <b>Online</b>.</p>
                         <div class="overflow-x-auto">
                             <table class="w-full min-w-[520px] text-sm">
@@ -219,7 +220,7 @@
                             </table>
                         </div>
                     @else
-                        <p class="text-xs text-ink-faint">Ubah harga tiap varian: <b>Modal</b>, <b>Offline</b>, &amp; <b>Online</b>.</p>
+                        <p class="text-xs text-ink-faint">Menambah warna? Isi <b>Varian</b> di atas → <b>Buat / segarkan varian</b>, lalu isi Modal/Offline/Online/Stok tiap warna. Varian lama yang sudah ada transaksinya akan dinonaktifkan (tidak dihapus).</p>
                         <div class="overflow-x-auto">
                             <table class="w-full min-w-[560px] text-sm">
                                 <thead><tr class="text-left text-xs uppercase tracking-wide text-ink-soft">
